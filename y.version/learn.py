@@ -4,7 +4,7 @@ from telebot import types
 from bot import BOT as bot
 import random
 from database import connect
-from users import LAST_MESSAGE
+# from users import LAST_MESSAGE
 
 class Learn():
     """

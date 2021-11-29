@@ -3,7 +3,7 @@ from telebot import types
 from state import State
 from bot import BOT as bot
 from database import connect#, db, sql
-from main import LAST_MESSAGES
+# from main import LAST_MESSAGES
 # from gtts import gTTS
 import re
 import emoji

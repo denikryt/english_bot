@@ -1,30 +1,48 @@
 import yaml
-from path import CURR_DIR
+from path import directory
 
-LAST_MESSAGE = {}
-WORKING_USERS = {}
+def write(user_name, user_id, message_id=None, target=str):
+    file_name = 'users.yaml'
+    with open(directory(file_name),'r', encoding='utf-8') as yamlfile:
+        cur_yaml = yaml.safe_load(yamlfile) # Note the safe_load
+
+        if target == 'new user':
+            data = {
+                user_name:{
+                    'id':user_id
+                }
+            }
+            cur_yaml['users'].update(data)
+
+        if target == 'last message':
+            data = {'last message':id}
+            cur_yaml['users'][user_name].update(data)
+
+    if cur_yaml:
+        with open(directory(file_name),'w', encoding='utf-8') as yamlfile:
+            yaml.safe_dump(cur_yaml, yamlfile, allow_unicode=True)
 
 
-with open('chat_id.yaml', 'r', encoding='utf-8') as f:
-    try:
-        CHAT_ID = yaml.load(f, Loader=yaml.FullLoader)['users']
-    except TypeError:
-        pass
+
+# from path import CURR_DIR
+
+# LAST_MESSAGE = {}
+# WORKING_USERS = {}
+
+# with open('chat_id.yaml', 'r', encoding='utf-8') as f:
+#     try:
+#         CHAT_ID = yaml.load(f, Loader=yaml.FullLoader)['users']
+#     except TypeError:
+#         pass
 
 
-for id in CHAT_ID.values():
-    WORKING_USERS[id] = False
-print(WORKING_USERS)
+# for id in CHAT_ID.values():
+#     WORKING_USERS[id] = False
+# print(WORKING_USERS)
 
 
 
-with open('bugs.yaml','r') as yamlfile:
-    cur_yaml = yaml.safe_load(yamlfile) # Note the safe_load
-    cur_yaml['bugs_tree'].update(d)
 
-if cur_yaml:
-    with open('bugs.yaml','w') as yamlfile:
-        yaml.safe_dump(cur_yaml, yamlfile)
 
 
 
