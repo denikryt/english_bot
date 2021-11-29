@@ -17,7 +17,9 @@ from path import directory
 from users import write
 
 
-time_to_wait = 30
+time_to_wait = 1000
+notify_delay = 500
+
 LAST_MESSAGES = {}
 WORKING_USERS = {}
 CHAT_ID = {}
@@ -41,8 +43,11 @@ with open(directory(file_name), 'r', encoding='utf-8') as f:
         pass
 
 if result:
-    for id in result.values():
+    for name, data in result.items():
+        id = result[name]['id']
         WORKING_USERS[id] = False
+    # for name in result.keys():
+        CHAT_ID[name] = id
     print(WORKING_USERS)
 
 
@@ -54,6 +59,7 @@ def language(message):
 def welcome(message):
     user_name = message.from_user.first_name
     user_id = message.chat.id
+    message_id = message.message_id
     WORKING_USERS[user_id] = time_to_wait
     
     if str(user_id) not in CHAT_ID:
@@ -69,6 +75,7 @@ def welcome(message):
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     items = [types.KeyboardButton(item) for item in items]
     markup.add(*items)
+    write(user_name, user_id, message_id=message_id+1, target='last message')
     bot.send_message(user_id, 'Что будем делать?', reply_markup=markup)
      
 @bot.message_handler(content_types=['text'])
@@ -137,7 +144,7 @@ def notification():
         send(CHAT_ID, send_list)
 
         send_list.clear()
-        time.sleep(10)
+        time.sleep(notify_delay)
 
 def send(chat_id, send_list):
     for user_id in send_list:
