@@ -1,0 +1,4 @@
+x.version/
+.vscode/
+_pycache_/
+venv/

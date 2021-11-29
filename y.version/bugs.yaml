@@ -1,0 +1,6 @@
+bugs_tree:
+  bug_1:
+    html_arch: filepath
+    moved_by: user1
+    moved_date: '2018-01-30'
+    sfx_id: '1'
