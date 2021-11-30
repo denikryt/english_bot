@@ -1,9 +1,12 @@
 # from state import State
 from collections import OrderedDict
-from telebot import types
+from telebot import types, apihelper
 from bot import BOT as bot
 import random
 from database import connect
+from path import directory
+import yaml
+from users import write, open_yaml
 # from users import LAST_MESSAGE
 
 class Learn():
@@ -44,18 +47,24 @@ class Learn():
         user_id = call.from_user.id
         message_ID = call.message.message_id
 
+        markup = types.InlineKeyboardMarkup(row_width=2)
+        item1 = types.InlineKeyboardButton('дальше', callback_data='next')
+        markup.add(item1)
+
         if call.data == 'True':
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Да!\n' + '<b>'+str(self.rand_choice)+'</b>' + ' :\n' + str(self.rand_tran1), parse_mode='html')
-            self.repeat.remove(self.random_word)
+            # bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Да!\n' + '<b>'+str(self.rand_choice)+'</b>' + ' :\n' + str(self.rand_tran1), parse_mode='html')
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Да!', reply_markup=markup, parse_mode='html')
 
-            if len(self.temp_choise_list) == 0:
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
-                markup.add(item1)
+            # self.repeat.remove(self.random_word)
 
-                bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
-                bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
-                bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
+            # if len(self.temp_choise_list) == 0:
+            #     markup = types.InlineKeyboardMarkup(row_width=2)
+            #     item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
+            #     markup.add(item1)
+
+            #     bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
+            #     bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
+            #     bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
                 
                 # folder_name = user_name + '(' + str(user_id) + ')'
                 
@@ -63,23 +72,25 @@ class Learn():
                 #     for x in self.repeat:
                 #         r.write(x+'\n')
 
-                return
-            else:
-                self.random_words(message, call)
+                # return
+            # else:
+            #     self.random_words(user_name, user_id)
 
             return True
 
         if call.data == 'False':
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Ne!\nПравильный ответ:\n' + str(self.rand_choice) + ' : ' + str(self.rand_tran1))
+            # bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Ne!\nПравильный ответ:\n' + str(self.rand_choice) + ' : ' + str(self.rand_tran1))
+            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, reply_markup=markup, text='Ne!')
 
-            if len(self.temp_choise_list) == 0:
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
-                markup.add(item1)
 
-                bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
-                bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
-                bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
+            # if len(self.temp_choise_list) == 0:
+            #     markup = types.InlineKeyboardMarkup(row_width=2)
+            #     item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
+            #     markup.add(item1)
+
+            #     bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
+            #     bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
+            #     bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
                 
 
                 # folder_name = user_name + '(' + str(user_id) + ')'
@@ -87,13 +98,16 @@ class Learn():
                 # with open(folder_name+'\\repeat.txt', 'w', encoding='utf-8') as r:
                 #     for x in self.repeat:
                 #         r.write(x+'\n')
-                return
-            else:
-                self.random_words(message, call)
-                
+                # return
+            # else:
+            #     self.random_words(user_name, user_id)
+
+        if call.data == 'next':
+            self.hello(self, user_name, user_id)
+        
         if call.data == 'repeat':
             self.temp_choise_list, self.repeat = self.words.copy(), self.words.copy()
-            self.random_words(message, call)
+            # self.random_words(message, call)
 
     def printing(self, chat_id=None):
         pass
@@ -185,7 +199,7 @@ class Learn():
     def buttons(self, message):
         pass
 
-    def random_words(self, user_name, user_ID):
+    def random_words(self, user_name, user_id):
 
         # if not message == None:
         #     user_ID = message.chat.id
@@ -198,7 +212,7 @@ class Learn():
             markup = types.InlineKeyboardMarkup(row_width=2)
             item1 = types.InlineKeyboardButton('Повторить по новой', callback_data='repeat')
             markup.add(item1)
-            bot.send_message(user_ID,'Слов для повтора нету!\n', reply_markup=markup)
+            bot.send_message(user_id,'Слов для повтора нету!\n', reply_markup=markup)
             return
         else:
             self.random_word = random.choice(self.temp_choise_list)
@@ -244,7 +258,27 @@ class Learn():
 
         markup = types.InlineKeyboardMarkup(row_width=1)
         markup.add(*self.rand_answers) 
-        bot.send_message(user_ID, 'Переведи слово:\n' + str(self.rand_choice), reply_markup=markup)
+
+        file_name = 'users.yaml'
+        
+        # with open(directory(file_name), 'r', encoding='utf-8') as f:
+        #     try:
+        #         result = yaml.load(f, Loader=yaml.FullLoader)['users'][user_name]
+        #     except TypeError:
+        #         pass
+
+        try:
+            last_notify = open_yaml()['users'][user_name]['last notify']
+            bot.delete_message(user_id, message_id=last_notify) 
+        except KeyError:
+            pass
+        except apihelper.ApiTelegramException:
+            print('НЕ УДАЛИЛОСЬ!')
+
+
+        bot.send_message(user_id, 'Переведи слово:\n' + str(self.rand_choice), reply_markup=markup)
+        # write(user_name, user_id, target='last message')
+        write(user_name, user_id, target='last notify')
 
 
         # if not message == None:

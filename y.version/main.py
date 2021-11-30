@@ -14,18 +14,20 @@ import database
 from learn import Learn
 # from users import LAST_MESSAGE
 from path import directory
-from users import write
+from users import write  
+import datetime
 
 
-time_to_wait = 1000
-notify_delay = 500
+time_to_wait = 600
+notify_delay = 3600
 
 LAST_MESSAGES = {}
 WORKING_USERS = {}
 CHAT_ID = {}
+STATUS = {}
 
 file_name = 'users.yaml'
-
+    
 
 file_exists = os.path.exists(directory(file_name))
 # file_exists=False
@@ -48,61 +50,84 @@ if result:
         WORKING_USERS[id] = False
     # for name in result.keys():
         CHAT_ID[name] = id
+        STATUS[id] = 'notify'
     print(WORKING_USERS)
 
 
 @bot.message_handler(commands=['lang'])
 def language(message):
-    context.language(message, None)
+    try:
+        context.language(message, None)
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
-    user_name = message.from_user.first_name
-    user_id = message.chat.id
-    message_id = message.message_id
-    WORKING_USERS[user_id] = time_to_wait
-    
-    if str(user_id) not in CHAT_ID:
+    try:
         # return
-        new_user(user_id, user_name)
+        user_name = message.from_user.first_name
+        user_id = message.chat.id
+        message_id = message.message_id
+        WORKING_USERS[user_id] = time_to_wait
+        STATUS[user_id] = 'working'
         
-    items = ['Работать с текстом', 'Загрузить предложения']
+        if str(user_id) not in CHAT_ID:
+            # return
+            new_user(user_id, user_name)
+            
+        items = ['Работать с текстом', 'Загрузить предложения']
 
-    if context._state.__module__ == 'text':
-        context.reset()
-        context.transition_to(default.Default())
-    
-    markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-    items = [types.KeyboardButton(item) for item in items]
-    markup.add(*items)
-    write(user_name, user_id, message_id=message_id+1, target='last message')
-    bot.send_message(user_id, 'Что будем делать?', reply_markup=markup)
+        if context._state.__module__ == 'text':
+            context.reset()
+            context.transition_to(default.Default())
+        
+        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
+        items = [types.KeyboardButton(item) for item in items]
+        markup.add(*items)
+        write(user_name, user_id, message_id=message_id+1, target='last message')
+        bot.send_message(user_id, 'Что будем делать?', reply_markup=markup)
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
      
 @bot.message_handler(content_types=['text'])
 def lalala(message):
-    user_name = message.from_user.first_name
-    user_id = message.chat.id
-    message_id = message.message_id
-    write(user_name, user_id, message_id=message_id, target='last message')
+    try:
+        # return
+        user_name = message.from_user.first_name
+        user_id = message.chat.id
+        message_id = message.message_id
+        write(user_name, user_id, message_id=message_id, target='last message')
 
-    # if WORKING_USERS[user_id] == False:
-    #     Learn.instructions(message)
+        # if WORKING_USERS[user_id] == False:
+        #     Learn.instructions(message)
 
-    WORKING_USERS[user_id] = time_to_wait
+        WORKING_USERS[user_id] = time_to_wait
+        STATUS[user_id] = 'working'
 
-    context.instructions(message)
+        context.instructions(message)
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-    user_name = call.from_user.first_name
-    user_id = call.message.chat.id
-    # write(user_name, user_id, message_id=message_id, target='last message')
-
-    if WORKING_USERS[user_id] == False:
-        Learn.inline_buttons(None, call)
-    else:
+    try:
+        # return
+        user_name = call.from_user.first_name
+        user_id = call.message.chat.id
         WORKING_USERS[user_id] = time_to_wait
-        context.inline_buttons(None,call)
+        # write(user_name, user_id, message_id=message_id, target='last message')
+
+        if STATUS[user_id] == 'notify':
+            Learn.inline_buttons(Learn, None, call)
+        else:
+            WORKING_USERS[user_id] = time_to_wait
+            context.inline_buttons(None,call)
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 def new_user(user_id, user_name):
     folder_name = user_name + '(' + str(user_id) + ')'
@@ -129,28 +154,39 @@ def wait():
             WORKING_USERS[user] = waiting - 1 
             if WORKING_USERS[user] == 0:
                 WORKING_USERS[user] = False
+                STATUS[user] = 'notify'
             print('MINUS', user, WORKING_USERS[user])
 
 def notification():
-    send_list = []
-    while True:
-        for user in WORKING_USERS:
-            active = WORKING_USERS[user]
+    try:
+        send_list = []
+        while True:
+            time.sleep(notify_delay)
+            for user in WORKING_USERS:
+                active = WORKING_USERS[user]
 
-            if not active:
-                print('PLUS')
-                send_list.append(user)
-        # send_list = [183278535]
-        send(CHAT_ID, send_list)
+                if not active:
+                    print('PLUS')
+                    send_list.append(user)
+            # send_list = [183278535]
+            send(CHAT_ID, send_list)
 
-        send_list.clear()
-        time.sleep(notify_delay)
+            send_list.clear()
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 def send(chat_id, send_list):
-    for user_id in send_list:
-        user_name = list(chat_id.keys())[list(chat_id.values()).index(user_id)]
+    try:
+        for user_id in send_list:
+            user_name = list(chat_id.keys())[list(chat_id.values()).index(user_id)]
 
-        Learn.hello(Learn, user_name, user_id)
+            d = datetime.datetime.utcnow()
+            if d.hour >= 8 <= 24:
+                Learn.hello(Learn, user_name, user_id)
+
+    except Exception as e:
+        bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 
 if __name__ == "__main__":

@@ -3,6 +3,7 @@ from telebot import types
 from state import State
 from bot import BOT as bot
 from database import connect#, db, sql
+from users import write
 # from main import LAST_MESSAGES
 # from gtts import gTTS
 import re
@@ -61,6 +62,8 @@ class Text(State):
 
     def language(self, message=None, call=None):
         user_id = message.chat.id
+        user_name = message.from_user.first_name
+        message_id = message.message_id
         self.changing_lang = True
         self.messages_while_changing += 2
         
@@ -71,6 +74,8 @@ class Text(State):
         markup.add(*items)
 
         bot.send_message(user_id, 'C каким языком будешь работать?', reply_markup=markup)
+        write(user_name, user_id, message_id=message_id+1, target='last message')
+
 
     def reset(self):
         self.changing_lang = False
@@ -169,7 +174,7 @@ class Text(State):
                     self.text = sql.fetchall()[0][0]
 
                 if self.building:
-                    # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.text_to_sents(message, call)
 
@@ -199,7 +204,7 @@ class Text(State):
                     self.text = sql.fetchall()[-1][0]
 
                 if self.building:
-                    # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.text_to_sents(message, call)
 
@@ -232,7 +237,7 @@ class Text(State):
                     return
 
                 if self.building:
-                    # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.sents_to_words(message, call, sents=None)
 
@@ -267,7 +272,7 @@ class Text(State):
                 self.input_sentences = True
                 self.building = False
                 self.sentence_buttons(message, call)
-                # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                 bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
 
             if call.data == 'delete':
@@ -323,7 +328,7 @@ class Text(State):
 
                     self.sent = GoogleTranslator(source='auto', target=target).translate(self.sent)
                 
-                # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                 bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                 self.sentence_buttons(message, call)
                 self.buttons(message, call)
@@ -412,21 +417,21 @@ class Text(State):
                 translated = GoogleTranslator(source=self.lang, target='ru').translate(self.word_to_write)
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=self.trans_window, text='<b>'+self.word_to_write+'</b>' + '\nозначает:\n' + translated, reply_markup=markup, parse_mode='html')
 
-            if call.data == 'okey':
+            # if call.data == 'okey':
 
-                bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажми на <b>'перевод'</b>, чтобы перевести предложение\nНажми на <b>'следующее'</b> чтобы перейти к следующему предложению\n\nИспользуй"+emoji.emojize(':heavy_plus_sign:')+"чтобы добавить следующее слово\n\Используй"+emoji.emojize(':heavy_minus_sign:')+"чтобы убрать добавленное слово\n\nТы можешь записать сколько угодно слов с предложения, <b>только не записывай одинаковые!</b>", parse_mode='html')
+            #     bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажми на <b>'перевод'</b>, чтобы перевести предложение\nНажми на <b>'следующее'</b> чтобы перейти к следующему предложению\n\nИспользуй"+emoji.emojize(':heavy_plus_sign:')+"чтобы добавить следующее слово\n\Используй"+emoji.emojize(':heavy_minus_sign:')+"чтобы убрать добавленное слово\n\nТы можешь записать сколько угодно слов с предложения, <b>только не записывай одинаковые!</b>", parse_mode='html')
 
-                markup = types.InlineKeyboardMarkup(row_width=2)
-                item = types.InlineKeyboardButton('погнали!', callback_data='go')
-                markup.add(item)
+            #     markup = types.InlineKeyboardMarkup(row_width=2)
+            #     item = types.InlineKeyboardButton('погнали!', callback_data='go')
+            #     markup.add(item)
 
-                bot.send_message(call.from_user.id, 
-                "Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", reply_markup=markup, parse_mode='html')
+            #     bot.send_message(call.from_user.id, 
+            #     "Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", reply_markup=markup, parse_mode='html')
 
-            if call.data == 'go':
-                bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", parse_mode='html')
+            # if call.data == 'go':
+            #     bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", parse_mode='html')
                 
-                self.sent_to_words(message, call)
+            #     self.sent_to_words(message, call)
 
     def sentence_buttons(self, message=None, call=None, state=None):
         if call:
@@ -649,15 +654,18 @@ class Text(State):
 
         if call:
 
-            chat_id = call.message.chat.id
+            user_id = call.message.chat.id
             message_id = call.message.message_id
+            user_name = call.from_user.first_name
 
             self.question_window = self.last_message_id+1
             self.trans_window = self.last_message_id+2
             self.last_message_id = self.trans_window
 
-            bot.send_message(chat_id, 'Какое слово тебе не знакомо?', reply_markup=markup)
-            bot.send_message(chat_id, 'Выбери слово')
+            bot.send_message(user_id, 'Какое слово тебе не знакомо?', reply_markup=markup)
+            bot.send_message(user_id, 'Выбери слово')
+            write(user_name, user_id, message_id=self.last_message_id, target='last message')
+
                 
             return
 
@@ -691,8 +699,10 @@ class Text(State):
         
         user_name = message.from_user.first_name
         message_id = message.message_id
-        chat_id = message.chat.id
+        user_id = message.chat.id
         self.last_message_id = message_id
+        write(user_name, user_id, message_id=message_id, target='last message')
+
 
         db, sql = self.data_base(message, call)
 
@@ -704,7 +714,7 @@ class Text(State):
                 self.changing_lang = False
 
                 for m in range(self.messages_while_changing):
-                    bot.delete_message(chat_id=chat_id, message_id=message_id-m)
+                    bot.delete_message(chat_id=user_id, message_id=message_id-m)
                 self.messages_while_changing = 0
             return
 
@@ -713,7 +723,7 @@ class Text(State):
             # self.sents = self.text_to_sents(message)
             sql.execute("INSERT INTO texts VALUES (?, ?)", (message_id, self.text))
             db.commit()
-            bot.delete_message(chat_id=chat_id, message_id=message_id)
+            bot.delete_message(chat_id=user_id, message_id=message_id)
 
             self.sentence_buttons(message)
             return
@@ -724,7 +734,7 @@ class Text(State):
         if self.adding_input:
             self.temp_word = message.text
             self.new_translate = True
-            bot.delete_message(chat_id=chat_id, message_id=message_id)
+            bot.delete_message(chat_id=user_id, message_id=message_id)
             self.menu(message, call)
 
             self.new_translate = False
@@ -744,10 +754,10 @@ class Text(State):
             self.free_input = True
 
         if self.question_window:
-            bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+            bot.delete_message(chat_id=user_id, message_id=self.question_window)
             self.question_window = None
 
-        bot.delete_message(chat_id=chat_id, message_id=message_id)
+        bot.delete_message(chat_id=user_id, message_id=message_id)
 
         self.menu(message, call)#chat_id)
 
@@ -778,6 +788,9 @@ class Text(State):
             pass
 
         bot.send_message(user_id, 'Получаю сообщения!')
+        write(user_name, user_id, message_id=self.last_message_id, target='last message')
+
+        
         if self.text:
             self.sentence_buttons(message, call)
 
