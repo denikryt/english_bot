@@ -213,7 +213,7 @@ class Text(State):
                     if last_text == self.text:
                         return
                     else:
-                        self.text = sql.fetchall()[-1][0]
+                        self.text = last_text
 
                 if self.building:
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)

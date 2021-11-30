@@ -21,7 +21,7 @@ import datetime
 time_to_wait = 10#600
 notify_delay = 10#3600
 
-LAST_MESSAGES = {}
+# LAST_MESSAGES = {}
 WORKING_USERS = {}
 CHAT_ID = {}
 STATUS = {}
@@ -47,11 +47,11 @@ with open(directory(file_name), 'r', encoding='utf-8') as f:
 if result:
     for name, data in result.items():
         id = result[name]['id']
-        WORKING_USERS[id] = False
+        # WORKING_USERS[id] = False
     # for name in result.keys():
         CHAT_ID[name] = id
-        STATUS[id] = 'notify'
-    print(WORKING_USERS)
+        # STATUS[id] = 'notify'
+    # print(WORKING_USERS)
 
 
 @bot.message_handler(commands=['lang'])
@@ -69,18 +69,18 @@ def welcome(message):
     user_name = message.from_user.first_name
     user_id = message.chat.id
     message_id = message.message_id
-    WORKING_USERS[user_id] = time_to_wait
-    STATUS[user_id] = 'working'
+    # WORKING_USERS[user_id] = time_to_wait
+    # STATUS[user_id] = 'working'
     
     if str(user_id) not in CHAT_ID:
         # return
         new_user(user_id, user_name)
         
-    items = ['Работать с текстом', 'Загрузить предложения']
+    items = ['Тестики', 'Загрузить предложения']
 
     if context._state.__module__ == 'text':
         context.reset()
-        context.transition_to(default.Default())
+    context.transition_to(default.Default())
     
     markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
     items = [types.KeyboardButton(item) for item in items]
@@ -94,7 +94,7 @@ def welcome(message):
 @bot.message_handler(content_types=['text'])
 def lalala(message):
     # try:
-        # return
+    # return
     user_name = message.from_user.first_name
     user_id = message.chat.id
     message_id = message.message_id
@@ -107,8 +107,8 @@ def lalala(message):
         # if WORKING_USERS[user_id] == False:
         #     Learn.instructions(message)
 
-        WORKING_USERS[user_id] = time_to_wait
-        STATUS[user_id] = 'working'
+        # WORKING_USERS[user_id] = time_to_wait
+        # STATUS[user_id] = 'working'
 
         context.instructions(message)
 
@@ -121,14 +121,14 @@ def callback_inline(call):
         # return
     user_name = call.from_user.first_name
     user_id = call.message.chat.id
-    WORKING_USERS[user_id] = time_to_wait
+    # WORKING_USERS[user_id] = time_to_wait
     # write(user_name, user_id, message_id=message_id, target='last message')
 
-    if STATUS[user_id] == 'notify':
-        Learn.inline_buttons(Learn, None, call)
-    else:
-        WORKING_USERS[user_id] = time_to_wait
-        context.inline_buttons(None,call)
+    # if STATUS[user_id] == 'notify':
+    #     Learn.inline_buttons(Learn, None, call)
+    # else:
+    #     WORKING_USERS[user_id] = time_to_wait
+    context.inline_buttons(None,call)
 
     # except Exception as e:
     #     bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
@@ -196,10 +196,10 @@ def send(chat_id, send_list):
 if __name__ == "__main__":
     """Client code"""
 
-    tmp = threading.Thread(target=notification, args=())
-    tmp.start()
-    tmp2 = threading.Thread(target=wait, args=())
-    tmp2.start()
+    # tmp = threading.Thread(target=notification, args=())
+    # tmp.start()
+    # tmp2 = threading.Thread(target=wait, args=())
+    # tmp2.start()
 
     context = context.Context(default.Default())
     bot.remove_webhook()

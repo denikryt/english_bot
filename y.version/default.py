@@ -3,7 +3,7 @@ from bot import BOT as bot
 from state import State
 from text import Text
 from vars import LAST_MESSAGE
-# from learn import Learn
+from learn import Learn
 # from game import Game
 # from load_text import LoadText
 # from words import Words
@@ -141,7 +141,8 @@ class Default(State):
             bot.send_message(message.chat.id, 'Что будем делать?', reply_markup=markup)
             return
 
-        if message.text == 'Работать с текстом':
+        if message.text == 'Тестики':
+            self.context.transition_to(Learn())
             self.context.hello(message, None)
             return
 

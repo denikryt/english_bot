@@ -29,7 +29,7 @@ class Learn():
     test_window = 0
     result_window = 0
 
-    def data_base(self, user_name, user_id):
+    def data_base(user_name, user_id):
         # if message:
         #     user_name = message.from_user.first_name
         #     user_id = message.chat.id
@@ -103,7 +103,7 @@ class Learn():
             #     self.random_words(user_name, user_id)
 
         if call.data == 'next':
-            self.hello(message, call)
+            self.hello(self, user_name, user_id)
         
         if call.data == 'repeat':
             self.temp_choise_list, self.repeat = self.words.copy(), self.words.copy()
@@ -118,14 +118,14 @@ class Learn():
     def vars(self, message, sents, count):
         pass
 
-    def hello(self, message, call) -> None:
+    def hello(self, user_name, user_id) -> None:
 
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call :
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
+        # if not message == None:
+        #     user_name = message.from_user.first_name
+        #     user_id = message.chat.id
+        # if not call == None:
+        #     user_name = call.from_user.first_name
+        #     user_id = call.from_user.id
 
 
         # words = []
@@ -185,7 +185,7 @@ class Learn():
         self.vocab = OrderedDict(zip(self.words, self.trans))
         self.sents = OrderedDict(zip(self.words, sents))
         self.temp_choise_list = self.repeat.copy()
-        self.random_words(message, call)
+        self.random_words(self, user_name, user_id)
 
     def text_to_sents(self, user):
         pass
@@ -199,14 +199,14 @@ class Learn():
     def buttons(self, message):
         pass
 
-    def random_words(self, message, call):
+    def random_words(self, user_name, user_id):
 
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call :
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
+        # if not message == None:
+        #     user_ID = message.chat.id
+        #     message_ID = message.message_id
+        # if not call == None:
+        #     user_ID = call.from_user.id
+        #     message_ID = call.message.message_id
 
         if len(self.temp_choise_list) == 0:
             # markup = types.InlineKeyboardMarkup(row_width=2)
@@ -305,7 +305,6 @@ class Learn():
         #         # bot.send_message(user_ID, 'Выбери вариант')
 
     def instructions(self, message) -> None:
-        return
         user = message.text
         def test():
 
