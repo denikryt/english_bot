@@ -209,10 +209,10 @@ class Learn():
         #     message_ID = call.message.message_id
 
         if len(self.temp_choise_list) == 0:
-            markup = types.InlineKeyboardMarkup(row_width=2)
-            item1 = types.InlineKeyboardButton('Повторить по новой', callback_data='repeat')
-            markup.add(item1)
-            bot.send_message(user_id,'Слов для повтора нету!\n', reply_markup=markup)
+            # markup = types.InlineKeyboardMarkup(row_width=2)
+            # item1 = types.InlineKeyboardButton('Повторить по новой', callback_data='repeat')
+            # markup.add(item1)
+            # bot.send_message(user_id,'Слов для повтора нету!\n', reply_markup=markup)
             return
         else:
             self.random_word = random.choice(self.temp_choise_list)

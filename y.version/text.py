@@ -168,10 +168,17 @@ class Text(State):
 
                 l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id>{sent_id}")]
                 try:
-                    self.text = l[0][0]
+                    next_text = l[0][0]
+                    self.text = next_text
                 except IndexError:
                     sql.execute(f"SELECT text FROM texts")
-                    self.text = sql.fetchall()[0][0]
+                    first_text = sql.fetchall()[0][0]
+                    if first_text == self.text:
+                        return
+                    else:
+                        self.text = first_text
+        
+
 
                 if self.building:
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
@@ -198,10 +205,15 @@ class Text(State):
 
                 l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id<{sent_id}")]
                 try:
-                    self.text = l[-1][0]
+                    previus_text = l[-1][0]
+                    self.text = previus_text
                 except IndexError:
                     sql.execute(f"SELECT text FROM texts")
-                    self.text = sql.fetchall()[-1][0]
+                    last_text = sql.fetchall()[-1][0]
+                    if last_text == self.text:
+                        return
+                    else:
+                        self.text = sql.fetchall()[-1][0]
 
                 if self.building:
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
