@@ -17,6 +17,18 @@ from path import directory
 from users import write  
 import datetime
 
+from flask_sslify import SSLify
+from flask import Flask, request
+
+URL = 'kentus.pythonanywhere.com'
+app = Flask(__name__)
+sslify = SSLify(app)
+
+bot.remove_webhook()
+bot.set_webhook(url=URL)
+
+bot.send_message(183278535, 'helo')
+context = context.Context(default.Default())
 
 time_to_wait = 10#600
 notify_delay = 10#3600
@@ -25,12 +37,12 @@ notify_delay = 10#3600
 WORKING_USERS = {}
 CHAT_ID = {}
 STATUS = {}
+FIRST_MESSAGE = False
 
 file_name = 'users.yaml'
     
-
 file_exists = os.path.exists(directory(file_name))
-# file_exists=False
+
 if not file_exists:
     with open(directory(file_name), 'w', encoding='utf-8') as f:
         data = {
@@ -54,8 +66,18 @@ if result:
     # print(WORKING_USERS)
 
 
+@bot.message_handler(commands=['wiki'])
+def language(message):
+    global FIRST_MESSAGE
+    FIRST_MESSAGE = True
+    # try:
+    context.transition_to(default.Default())
+    context.instructions(message)
+
 @bot.message_handler(commands=['lang'])
 def language(message):
+    global FIRST_MESSAGE
+    FIRST_MESSAGE = True
     # try:
     context.language(message, None)
 
@@ -64,6 +86,8 @@ def language(message):
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
+    global FIRST_MESSAGE
+    FIRST_MESSAGE = True
     # try:
         # return
     user_name = message.from_user.first_name
@@ -93,11 +117,17 @@ def welcome(message):
      
 @bot.message_handler(content_types=['text'])
 def lalala(message):
+    global FIRST_MESSAGE    
+    FIRST_MESSAGE = True
     # try:
     # return
     user_name = message.from_user.first_name
     user_id = message.chat.id
     message_id = message.message_id
+
+    folder_name = user_name + '(' + str(user_id) + ')'
+    db, sql = database.connect(folder_name)
+    database.create(db, sql)
     
     if user_id not in CHAT_ID.values():
         bot.send_message(user_id, 'напиши /start !')
@@ -117,6 +147,8 @@ def lalala(message):
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
+    if not FIRST_MESSAGE:
+        return
     # try:
         # return
     user_name = call.from_user.first_name
@@ -193,16 +225,18 @@ def send(chat_id, send_list):
     #     bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 
-if __name__ == "__main__":
-    """Client code"""
+# if __name__ == "__main__":
+#     """Client code"""
 
-    # tmp = threading.Thread(target=notification, args=())
-    # tmp.start()
-    # tmp2 = threading.Thread(target=wait, args=())
-    # tmp2.start()
+#     context = context.Context(default.Default())
+#     bot.remove_webhook()
+#     bot.polling(none_stop=False)
 
-    context = context.Context(default.Default())
-    bot.remove_webhook()
-    bot.polling(none_stop=False)
+#     # tmp = threading.Thread(target=notification, args=())
+#     # tmp.start()
+#     # tmp2 = threading.Thread(target=wait, args=())
+#     # tmp2.start()
+
+
 
             

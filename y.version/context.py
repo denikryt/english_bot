@@ -56,8 +56,8 @@ class Context:
     def vars(self, message, call, sents, count, lang):
         self._state.vars(message, call, sents, count, lang)
 
-    def hello(self, message, call):
-        self._state.hello(message, call)
+    def hello(self, message, call, *args, **kwargs):
+        self._state.hello(message, call, *args, **kwargs)
 
     def text_to_sents(self, message, call):
         self._state.text_to_sents(message, call)

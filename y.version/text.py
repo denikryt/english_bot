@@ -24,7 +24,8 @@ class Text(State):
 
     slicer = 0
     sent_id = 0
-    count = 0
+    sent_count = 0
+    text_count = 0
     output_messages = 0
     input_messages = 0
     index_word = 0
@@ -48,6 +49,7 @@ class Text(State):
     sents = []
     words = []
     current_ids = []
+    all_texts = []
 
     changing_lang = False
     new_translate = False
@@ -82,7 +84,8 @@ class Text(State):
         self.messages_while_changing = 0
         self.slicer = 0
         self.sent_id = 0
-        self.count = 0
+        self.sent_count = 0
+        self.text_count = 0
         self.output_messages = 0
         self.input_messages = 0
         self.index_word = 0
@@ -104,6 +107,7 @@ class Text(State):
         self.sents = []
         self.words = []
         self.current_ids = []
+        self.all_texts = []
 
         self.new_translate = False
         self.free_input = False
@@ -145,7 +149,7 @@ class Text(State):
                 self.adding = True
                 self.adding_input = True
                 # self.translated_word = 'Добавь перевод!'
-                self.menu(chat_id)
+                self.menu(message, call)
             
 
             if call.data == 'translate':
@@ -159,81 +163,64 @@ class Text(State):
 
             if call.data == 'next':
                 self.reverse = False
-                self.count = 0
-                # self.all_text = False
-                db, sql = self.data_base(message, call)
 
-                sql.execute("SELECT id FROM texts WHERE text=(?)", (self.text,))
-                sent_id = sql.fetchone()[0]
+                if len(self.all_texts) == 1:
+                    return
 
-                l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id>{sent_id}")]
-                try:
-                    next_text = l[0][0]
+                elif self.text_count == len(self.all_texts)-1:
+                    self.text_count = 0
+                    next_text = self.all_texts[self.text_count]
                     self.text = next_text
-                except IndexError:
-                    sql.execute(f"SELECT text FROM texts")
-                    first_text = sql.fetchall()[0][0]
-                    if first_text == self.text:
-                        return
-                    else:
-                        self.text = first_text
-        
-
+                    
+                elif self.text_count >= 0:
+                    self.text_count += 1
+                    next_text = self.all_texts[self.text_count]
+                    self.text = next_text
 
                 if self.building:
+                    self.sent_count = 0
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.text_to_sents(message, call)
 
-                # sql.execute("SELECT len FROM texts WHERE text=(?)", (self.text,))
-                # len_txt = sql.fetchone()[0]
-
-                # if len_txt > 1:
-                #     self.text_to_sents(message, call)
-                    
                 self.sentence_buttons(message, call)
-                # self.text_to_sents(message, call)
                 return
             
             if call.data == 'previous':
                 self.reverse = False
-                self.count = 0
-                db, sql = self.data_base(message, call)
 
-                sql.execute("SELECT id FROM texts WHERE text=(?)", (self.text,))
-                sent_id = sql.fetchone()[0]
+                if len(self.all_texts) == 1:
+                    return
 
-                l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id<{sent_id}")]
-                try:
-                    previus_text = l[-1][0]
+                elif self.text_count == 0:
+                    self.text_count = len(self.all_texts)-1
+                    previus_text = self.all_texts[self.text_count]
                     self.text = previus_text
-                except IndexError:
-                    sql.execute(f"SELECT text FROM texts")
-                    last_text = sql.fetchall()[-1][0]
-                    if last_text == self.text:
-                        return
-                    else:
-                        self.text = last_text
 
+                elif self.text_count <= len(self.all_texts)-1:
+                    self.text_count -= 1
+                    previus_text = self.all_texts[self.text_count]
+                    self.text = previus_text
+                    
                 if self.building:
+                    self.sent_count = 0
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.text_to_sents(message, call)
 
                 self.sentence_buttons(message, call)
-
                 return
             
             if call.data == 'previous_sent':
                 self.reverse = False
-                if self.count > 0:
-                    self.count -= 1
+                if self.sent_count > 0:
+                    self.sent_count -= 1
                     # self.sent = self.sents[self.count]
                 else:
                     return
                 
                 if self.building:
-                    # bot.delete_message(chat_id=chat_id, message_id=self.question_window)
+                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                     self.sents_to_words(message, call, sents=None)
 
@@ -242,8 +229,8 @@ class Text(State):
 
             if call.data == 'next_sent':
                 self.reverse = False
-                if self.count < len(self.sents)-1:
-                    self.count += 1
+                if self.sent_count < len(self.sents)-1:
+                    self.sent_count += 1
                     # self.sent = self.sents[self.count]
                 else:
                     return
@@ -268,7 +255,7 @@ class Text(State):
                 return
 
             if call.data == 'build':
-                self.count = 0
+                self.sent_count = 0
                 # self.sent = self.sents[self.count]
 
                 self.building = True
@@ -288,38 +275,38 @@ class Text(State):
                 bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
 
             if call.data == 'delete':
+                # return
                 if not self.text and not self.text_window:
                     self.text = call.message.text
                     self.text_window = call.message.message_id
                 
-                word_to_delete = self.text
+                text_to_delete = self.text
 
                 db, sql = self.data_base(message, call)
 
                 def delete():
-                    sql.execute("DELETE FROM texts WHERE text=(?)", (word_to_delete,))
+                    sql.execute("DELETE FROM texts WHERE text=(?)", (text_to_delete,))
                     db.commit()
+                    self.all_texts.remove(text_to_delete)
 
-                sql.execute("SELECT id FROM texts WHERE text=(?)", (self.text,))
-                sent_id = sql.fetchone()[0]
-
-                l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id<{sent_id}")]
-                try:
-                    self.text = l[-1][0]
+                if len(self.all_texts) == 1:
+                    self.text_count = 0
+                    self.text = None
                     delete()
-                except IndexError:
-                    try:
-                        l = [x for x in sql.execute(f"SELECT text FROM texts WHERE id>{sent_id}")]
-                        self.text = l[0][0]
-                        delete()
-                    except IndexError:
-                        bot.edit_message_text(text='Предложения закончились!', chat_id=chat_id, message_id=self.text_window)
-                        self.text = None
-                        delete()
-                        self.hello(message, call)
-                        return
+                    bot.delete_message(chat_id=chat_id, message_id=self.text_window)
+                    self.hello(message, call)
+                    return
 
+                elif self.text_count == len(self.all_texts)-1:
+                    self.text_count -= 1
+                    self.text = self.all_texts[self.text_count]
+
+                elif self.text_count < len(self.all_texts)-1:
+                    self.text = self.all_texts[self.text_count+1]
+
+                delete()
                 self.sentence_buttons(message, call)
+                return
 
             if call.data == 'reverse':
 
@@ -532,7 +519,7 @@ class Text(State):
         #         markup.add(prev, trans, next, build, delete)
             # raise
         self.visual_text = text
-        bot.edit_message_text(text=text, chat_id=chat_id, message_id=self.text_window,reply_markup=markup)
+        bot.edit_message_text(text=text, chat_id=chat_id, message_id=self.text_window,reply_markup=markup, parse_mode='html')
 
     def printing(self, message=None, call=None):
 
@@ -647,7 +634,7 @@ class Text(State):
         #     return
         if sents:
             self.sents = sents
-        self.sent = self.sents[self.count]
+        self.sent = self.sents[self.sent_count]
         # # self.sent = message.text
         # self.words = re.findall(r"[\w']+", self.sent)
 
@@ -681,13 +668,25 @@ class Text(State):
                 
             return
 
-    def write_word(self, message=None, call=None):
+    def name_id(self, message=None, call=None):
         if message:
             user_name = message.from_user.first_name
             user_id = message.chat.id
         if call:
             user_name = call.from_user.first_name
             user_id = call.from_user.id
+
+        return user_name, user_id
+
+    def write_word(self, message=None, call=None):
+        # if message:
+        #     user_name = message.from_user.first_name
+        #     user_id = message.chat.id
+        # if call:
+        #     user_name = call.from_user.first_name
+        #     user_id = call.from_user.id
+
+        user_name, user_id = self.name_id(message, call)
 
         db, sql = self.data_base(message, call)
 
@@ -713,8 +712,7 @@ class Text(State):
         message_id = message.message_id
         user_id = message.chat.id
         self.last_message_id = message_id
-        write(user_name, user_id, message_id=message_id, target='last message')
-
+        write(user_name, user_id, message_id=self.last_message_id, target='last message')
 
         db, sql = self.data_base(message, call)
 
@@ -732,6 +730,7 @@ class Text(State):
 
         if self.input_sentences:
             self.text = message.text
+            self.all_texts.append(self.text)
             # self.sents = self.text_to_sents(message)
             sql.execute("INSERT INTO texts VALUES (?, ?)", (message_id, self.text))
             db.commit()
@@ -765,44 +764,85 @@ class Text(State):
         except ValueError:
             self.free_input = True
 
-        if self.question_window:
-            bot.delete_message(chat_id=user_id, message_id=self.question_window)
-            self.question_window = None
+        # if self.question_window:
+        #     # bot.delete_message(chat_id=user_id, message_id=self.question_window)
+        #     # self.question_window = None
 
         bot.delete_message(chat_id=user_id, message_id=message_id)
 
         self.menu(message, call)#chat_id)
 
-    def hello(self, message, call):
-
+    def vars(self, message=None, call=None):
         if message:
             user_name = message.from_user.first_name
             user_id = message.chat.id
             message_id = message.message_id
-            self.text_window = message_id+1
         if call:
-            if call.data == 'delete':
-                user_name = call.from_user.first_name
-                user_id = call.message.chat.id
-                message_id = call.message.message_id
-                self.text_window = self.last_message_id+1 
+            user_name = call.from_user.first_name
+            user_id = call.message.chat.id
+            message_id = call.message.message_id
+        return user_name, user_id, message_id
 
-        self.last_message_id = self.text_window
-        self.count = 0
-        self.input_sentences = True
-
+    def hello(self, message=None, call=None, data=None, reason=None, last_message=None):
+        user_name, user_id, message_id = self.vars(message,call)
         db, sql = self.data_base(message, call)
 
-        sql.execute("SELECT text FROM texts")
-        try:
-            self.text = sql.fetchall()[0][0]
-        except IndexError :
-            pass
+        self.text_count = 0
+        self.sent_count = 0
+        self.input_sentences = True
+
+        if not reason:
+            self.last_message_id = message_id
+            sql.execute("SELECT text FROM texts")
+            try:
+                self.all_texts = [text[0] for text in sql.fetchall()]
+                self.text = self.all_texts[0]
+            except IndexError :
+                pass
+
+        if reason == 'wiki':
+            self.last_message_id = last_message
+            symbols = 500
+
+            for title in data:
+                text = data[title]
+                l = len(data[title])
+                parts = int(len(text)/symbols) +1
+                part_index = 0
+                part = 0
+
+                while not part == parts:
+                    part += 1
+                    if parts > 1:
+                        text = data[title][part_index:]
+                        slice = text[0:symbols]
+
+                        if '.' not in slice:
+                            while '.' not in slice:
+                                if len(slice)+symbols < 4000: 
+                                    slice = text[0:symbols+1000] 
+                                    part += 1
+                                if len(slice) == len(data[title]):
+                                    break
+                            text = slice
+                        else:
+                            end = slice.rindex('.')
+                            part_index += end+1
+                            text = slice[0:end+1]
+                    else:
+                        pass
+
+                    htmltitle = '<b>'+title+'</b>'
+                    all_text = htmltitle +'\n'+ text
+                    self.all_texts.append(all_text)
+
+            self.text = self.all_texts[0]
 
         bot.send_message(user_id, 'Получаю сообщения!')
+        self.last_message_id += 1
+        self.text_window = self.last_message_id
         write(user_name, user_id, message_id=self.last_message_id, target='last message')
 
-        
         if self.text:
             self.sentence_buttons(message, call)
 
@@ -821,8 +861,8 @@ class Text(State):
         def split_into_sentences(text):
         
             text = " " + text + "  "
-            text = text.replace('-\n', '')
-            text = text.replace("\n"," ") 
+            # text = text.replace('-\n', '')
+            # text = text.replace("\n"," ") 
             text = re.sub(prefixes,"\\1<prd>",text)
             text = re.sub(websites,"<prd>\\1",text)
             if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")

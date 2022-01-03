@@ -23,6 +23,13 @@ def create(db, sql):
 
   db.commit()
 
+  sql.execute("""CREATE TABLE IF NOT EXISTS wiki (
+    url TEXT,
+    title TEXT
+  )""")
+
+  db.commit()
+
 # db, sql = connect('Ö(183278535)')
 # connect('Ö(183278535)')
 # print('helo')

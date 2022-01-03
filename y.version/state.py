@@ -50,7 +50,7 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def hello(self, message) -> None:
+    def hello(self, message, *args, **kwargs) -> None:
         pass
 
     @abstractmethod

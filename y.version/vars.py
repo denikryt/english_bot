@@ -1,1 +1,0 @@
-LAST_MESSAGE = 0 

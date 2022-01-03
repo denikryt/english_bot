@@ -2,8 +2,9 @@ from telebot import types
 from bot import BOT as bot
 from state import State
 from text import Text
-from vars import LAST_MESSAGE
+# from vars import LAST_MESSAGE
 from learn import Learn
+from wiki import Wiki
 # from game import Game
 # from load_text import LoadText
 # from words import Words
@@ -99,7 +100,7 @@ class Default(State):
             markup.add(item1, item2)
 
             bot.send_message(message.chat.id, 'Что?', reply_markup=markup)
-            LAST_MESSAGE += 1
+            # LAST_MESSAGE += 1
         else:
             self.context.transition_to(LoadText())
             # bot.send_message(message.chat.id, 'Пришли мне текст!')
@@ -125,7 +126,7 @@ class Default(State):
     def buttons(self, call):
         pass
          
-    def instructions(self, message) -> None:
+    def instructions(self, message=None, call=None) -> None:
         if message.text == 'Загрузить предложения':
             self.context.transition_to(Text())
             self.context.hello(message, None)
@@ -145,6 +146,12 @@ class Default(State):
             self.context.transition_to(Learn())
             self.context.hello(message, None)
             return
+
+        if message.text == '/wiki':
+            self.context.transition_to(Wiki())
+            self.context.hello(message, call)
+            return
+
 
         if message.text == 'Поучим слова':
             self.context.transition_to(Learn())
