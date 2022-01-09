@@ -51,63 +51,24 @@ class Learn():
         item1 = types.InlineKeyboardButton('дальше', callback_data='next')
         markup.add(item1)
 
-        if call.data == 'True':
-            # bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Да!\n' + '<b>'+str(self.rand_choice)+'</b>' + ' :\n' + str(self.rand_tran1), parse_mode='html')
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Да!', reply_markup=markup, parse_mode='html')
+        if call.data == 'new':
+            self.send_message(message, call, case='delete', message_id=self.game_window)
+            self.start(message, call)
 
-            # self.repeat.remove(self.random_word)
+        if call.data == 'prompt':
+            if self.prompt > 0:
+                self.prompt -= 1
+                self.spelling += self.chars[self.char]
+                self.char += 1
 
-            # if len(self.temp_choise_list) == 0:
-            #     markup = types.InlineKeyboardMarkup(row_width=2)
-            #     item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
-            #     markup.add(item1)
+                self.send_message(message, call, case='prompt')
+            else:
+                return
+            # return
 
-            #     bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
-            #     bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
-            #     bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
-                
-                # folder_name = user_name + '(' + str(user_id) + ')'
-                
-                # with open(folder_name+'\\repeat.txt', 'w', encoding='utf-8') as r:
-                #     for x in self.repeat:
-                #         r.write(x+'\n')
+        if call.data == 'give_up':
+            self.send_message(message, call, case='loose')
 
-                # return
-            # else:
-            #     self.random_words(user_name, user_id)
-
-            return True
-
-        if call.data == 'False':
-            # bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, text='Ne!\nПравильный ответ:\n' + str(self.rand_choice) + ' : ' + str(self.rand_tran1))
-            bot.edit_message_text(chat_id=call.message.chat.id, message_id=message_ID, reply_markup=markup, text='Ne!')
-
-
-            # if len(self.temp_choise_list) == 0:
-            #     markup = types.InlineKeyboardMarkup(row_width=2)
-            #     item1 = types.InlineKeyboardButton('выйти в главное меню', callback_data='main_menu')
-            #     markup.add(item1)
-
-            #     bot.send_message(call.message.chat.id,'Это всё, ты молодец!')
-            #     bot.send_message(call.message.chat.id,'Те слова, которые ты не угадал ты можешь подучить в следующий раз!')
-            #     bot.send_message(call.message.chat.id,'Теперь ты можешь прислать мне новый текст, да присылай побольше! :)', reply_markup=markup)
-                
-
-                # folder_name = user_name + '(' + str(user_id) + ')'
-                
-                # with open(folder_name+'\\repeat.txt', 'w', encoding='utf-8') as r:
-                #     for x in self.repeat:
-                #         r.write(x+'\n')
-                # return
-            # else:
-            #     self.random_words(user_name, user_id)
-
-        if call.data == 'next':
-            self.hello(message, call)
-        
-        if call.data == 'repeat':
-            self.temp_choise_list, self.repeat = self.words.copy(), self.words.copy()
-            # self.random_words(message, call)
 
     def printing(self, chat_id=None):
         pass
@@ -119,18 +80,7 @@ class Learn():
         pass
 
     def hello(self, message, call) -> None:
-
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call :
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
-
-
-        # words = []
-        # translate = []
-        # sentence = []
+        user_name, user_id = self.name_id(message, call)
 
         db, sql = self.data_base(user_name, user_id)
 
@@ -143,7 +93,7 @@ class Learn():
 
         sql.execute("SELECT translate  FROM english")
         result = sql.fetchall()
-        
+
         split_t = []
 
         for row in result:
@@ -152,7 +102,7 @@ class Learn():
 
         sql.execute("SELECT sentence FROM english")
         result = sql.fetchall()
-        
+
         sents = []
 
         for row in result:
@@ -161,31 +111,11 @@ class Learn():
 
         self.repeat = self.words.copy()
         self.trans = [j for i in split_t for j in [i.split(',')]]
-        # folder_name = user_name + '(' + str(user_id) + ')'
 
-        # w = open(folder_name+'\\words.txt', 'r', encoding='utf-8') #, encoding='utf-8'
-        # t = open(folder_name+'\\trans.txt', 'r')
-        # s = open(folder_name+'\\sents.txt', 'r', encoding='utf-8')
-        # r = open(folder_name+'\\repeat.txt', 'r', encoding='utf-8')
-        
-        # self.words = w.read().splitlines()
-        # self.repeat = r.read().splitlines()
-
-        # split_t = t.read().splitlines()
-        # self.trans = [j for i in split_t for j in [i.split(';')]]
-
-        # split_s = s.read().splitlines()
-        # sents = [o for p in split_s for o in [p.split(';')]]
-
-        # w.close()
-        # t.close()
-        # s.close()
-        # r.close()
-                   
         self.vocab = OrderedDict(zip(self.words, self.trans))
         self.sents = OrderedDict(zip(self.words, sents))
         self.temp_choise_list = self.repeat.copy()
-        self.random_words(message, call)
+        self.start(message, call)
 
     def text_to_sents(self, user):
         pass
@@ -198,6 +128,19 @@ class Learn():
 
     def buttons(self, message):
         pass
+
+    def name_id(self, message, call, get=None):
+        if message:
+            user_name = message.from_user.first_name
+            user_id = message.chat.id
+            message_id = message.message_id
+        if call :
+            user_name = call.from_user.first_name
+            user_id = call.from_user.id
+            message_id = call.message.message_id
+        if get == 'message_id':
+            return message_id
+        return user_name, user_id
 
     def random_words(self, message, call):
 
@@ -216,7 +159,7 @@ class Learn():
             return
         else:
             self.random_word = random.choice(self.temp_choise_list)
-       
+
         which_rand = [self.random_word, self.vocab[self.random_word]]
         self.rand_choice = random.choice(which_rand)
         list_for_answers = self.words.copy()
@@ -233,7 +176,7 @@ class Learn():
             # rand_tran5 = random.choice(self.vocab[r_trans[3]])
             # rand_tran6 = random.choice(self.vocab[r_trans[4]])
 
-        if type(self.rand_choice) == list: 
+        if type(self.rand_choice) == list:
             self.temp_choise_list.remove(self.random_word)
             list_for_answers.remove(self.random_word)
 
@@ -245,7 +188,7 @@ class Learn():
             # rand_tran5 = r_trans[3]
             # rand_tran6 = r_trans[4]
 
-        
+
         item1 = types.InlineKeyboardButton(self.rand_tran1, callback_data='True')
         item2 = types.InlineKeyboardButton(rand_tran2, callback_data='False')
         item3 = types.InlineKeyboardButton(rand_tran3, callback_data='False')
@@ -257,10 +200,10 @@ class Learn():
         random.shuffle(self.rand_answers)
 
         markup = types.InlineKeyboardMarkup(row_width=1)
-        markup.add(*self.rand_answers) 
+        markup.add(*self.rand_answers)
 
         file_name = 'users.yaml'
-        
+
         # with open(directory(file_name), 'r', encoding='utf-8') as f:
         #     try:
         #         result = yaml.load(f, Loader=yaml.FullLoader)['users'][user_name]
@@ -269,7 +212,7 @@ class Learn():
 
         try:
             last_notify = open_yaml()['users'][user_name]['last notify']
-            bot.delete_message(user_id, message_id=last_notify) 
+            bot.delete_message(user_id, message_id=last_notify)
         except KeyError:
             pass
         except apihelper.ApiTelegramException:
@@ -286,7 +229,7 @@ class Learn():
         #     self.result_window = message_ID+2
         #     bot.send_message(user_ID, 'Выбери вариант')
         #     bot.send_message(user_ID, 'Выбери вариант')
-        
+
         # if not call == None:
         #     if call.data == 'learn': # or call.data == 'repeat'
         #         self.test_window = message_ID+1
@@ -297,56 +240,113 @@ class Learn():
         #     elif call.data == 'repeat':
         #         bot.edit_message_text(chat_id=user_ID, message_id=message_ID, text='Переведи слово:\n' + str(self.rand_choice), reply_markup=markup)
         #         bot.send_message(user_ID, 'Выбери вариант')
-            
+
         #     else:
         #         bot.edit_message_text(chat_id=user_ID, message_id=message_ID+1, text='Переведи слово:\n' + str(self.rand_choice), reply_markup=markup)
         #         bot.send_message(user_ID, 'Выбери вариант')
         #         # bot.send_message(user_ID, 'Переведи слово:\n' + str(self.rand_choice), reply_markup=markup)
         #         # bot.send_message(user_ID, 'Выбери вариант')
 
-    def instructions(self, message) -> None:
-        return
-        user = message.text
-        def test():
+    def start(self, message, call):
+        user_name, user_id = self.name_id(message, call)
+        if not call:
+            self.last_message = message.message_id
 
-            # if user.rstrip() == 'q':
-            #     user_name = message.from_user.first_name
-            #     user_id = message.chat.id
-            #     folder_name = user_name + '(' + str(user_id) + ')'
-                
-            #     with open(folder_name+'\\repeat.txt', 'w', encoding='utf-8') as r:
-            #         for x in self.repeat:
-            #             r.write(x+'\n')
-            #     return 'back'
-                
-            try:
-                if user == self.rand_tran1:
-                    bot.send_message(message.chat.id,'Да!')
-                    self.repeat.remove(self.random_word)
-                    return True
+        self.random_word = random.choice(self.temp_choise_list)
+        self.translate = ','.join(self.vocab[self.random_word])
 
+        self.loose = False
+        self.attempts = 3
+        self.prompt = 3
+        self.spelling = ''
+        self.chars = []
+        self.chars = [char.lower() for char in self.random_word]
+        self.char = 0
+
+        self.send_message(message, call, case='send')
+
+    def instructions(self, message=None, call=None):
+        self.last_message = message.message_id
+
+        text = message.text.strip().lower()
+        word = self.random_word.lower()
+        char = self.chars[self.char]
+
+        self.send_message(message, call, case='delete', message_id=self.last_message)
+
+        if self.attempts > 0:
+            if text == word:
+                self.spelling = word
+                self.send_message(message, call, case='fast_win')
+                return
+
+            if text == char:
+                self.spelling += char
+                self.char += 1
+
+                if self.spelling == word:
+                    self.send_message(message, call, case='win')
                 else:
-                    bot.send_message(message.chat.id,'Ne!')
-                    bot.send_message(message.chat.id,'Правильный ответ: ' + str(self.rand_tran1))
-                    return True
+                    self.send_message(message, call, case='correct')
+                return
 
-            except ValueError:
-                print('Цифру!')
-                return False
-                
-        if test() == True:
-            if len(self.temp_choise_list) == 0:
-                bot.send_message(message.chat.id,'Всё!')
-
-                user_name = message.from_user.first_name
-                user_id = message.chat.id
-                folder_name = user_name + '(' + str(user_id) + ')'
-                
-                # with open(folder_name+'\\repeat.txt', 'w', encoding='utf-8') as r:
-                #     for x in self.repeat:
-                #         r.write(x+'\n')
+            if not text == char:
+                self.attempts -= 1
+                if self.attempts > 0:
+                    self.send_message(message,call,case='incorrect')
+                else:
+                    self.send_message(message,call, case='loose')
+        else:
+            if self.loose:
                 return
             else:
-                self.random_words(message)
-        else:
-            return
+                self.send_message(message, call, case='loose')
+                self.loose = True
+
+    def send_message(self, message=None, call=None, case=None, message_id=None):
+        user_name, user_id = self.name_id(message, call)
+        cases = ['correct', 'incorrect', 'prompt']
+
+        text = f'Переведи слово\n<b>{self.translate}</b>\n{self.spelling}\nПопыток: {str(self.attempts)}\nПодсказок: {str(self.prompt)}'
+
+        markup = types.InlineKeyboardMarkup(row_width=2)
+
+        item1 = types.InlineKeyboardButton('Подсказка', callback_data='prompt')
+        item2 = types.InlineKeyboardButton('Сдаюсь', callback_data='give_up')
+        item3 = types.InlineKeyboardButton('Новое слово', callback_data='new')
+
+        markup.add(item1,item2)
+
+        if case == 'send':
+            bot.send_message(user_id, text, reply_markup=markup, parse_mode='html')
+            self.last_message += 1
+            self.game_window = self.last_message
+
+        if case in cases:
+            bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
+        if case == 'delete':
+            bot.delete_message(chat_id=user_id, message_id=message_id)
+
+        if case == 'win':
+            text = f'Правильно!\n<b>{self.translate}</b>\nозначает\n<b>{self.random_word}</b>'
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(item3)
+
+            bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
+        if case == 'fast_win':
+            text = f'СУПЕР!\n<b>{self.translate}</b>\nозначает\n<b>{self.random_word}</b>'
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(item3)
+
+            bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
+        if case == 'loose':
+            text = f'Проиграл!\n<b>{self.translate}</b>\noзначает\n<b>{self.random_word}</b>'
+            markup = types.InlineKeyboardMarkup(row_width=1)
+            markup.add(item3)
+
+            bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
+        return

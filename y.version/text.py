@@ -13,12 +13,12 @@ class Text(State):
     """
     Description
     """
-    
+
     langs = {
         'Английский' : 'en',
-        'Турецкий' : 'tr' , 
-        'Французский' : 'fr', 
-        'Итальянский' : 'it', 
+        'Турецкий' : 'tr' ,
+        'Французский' : 'fr',
+        'Итальянский' : 'it',
         'Китайский' : 'zh-tw',
     }
 
@@ -68,7 +68,7 @@ class Text(State):
         message_id = message.message_id
         self.changing_lang = True
         self.messages_while_changing += 2
-        
+
         items = ['Английский', 'Турецкий', 'Французский', 'Итальянский', 'Китайский']
 
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -150,7 +150,7 @@ class Text(State):
                 self.adding_input = True
                 # self.translated_word = 'Добавь перевод!'
                 self.menu(message, call)
-            
+
 
             if call.data == 'translate':
                 self.sentence_buttons(message, call)
@@ -171,7 +171,7 @@ class Text(State):
                     self.text_count = 0
                     next_text = self.all_texts[self.text_count]
                     self.text = next_text
-                    
+
                 elif self.text_count >= 0:
                     self.text_count += 1
                     next_text = self.all_texts[self.text_count]
@@ -185,7 +185,7 @@ class Text(State):
 
                 self.sentence_buttons(message, call)
                 return
-            
+
             if call.data == 'previous':
                 self.reverse = False
 
@@ -201,7 +201,7 @@ class Text(State):
                     self.text_count -= 1
                     previus_text = self.all_texts[self.text_count]
                     self.text = previus_text
-                    
+
                 if self.building:
                     self.sent_count = 0
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
@@ -210,7 +210,7 @@ class Text(State):
 
                 self.sentence_buttons(message, call)
                 return
-            
+
             if call.data == 'previous_sent':
                 self.reverse = False
                 if self.sent_count > 0:
@@ -218,7 +218,7 @@ class Text(State):
                     # self.sent = self.sents[self.count]
                 else:
                     return
-                
+
                 if self.building:
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                     bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
@@ -265,7 +265,7 @@ class Text(State):
                 # self.trans_window = message_id
                 self.text_to_sents(message, call)
                 self.sentence_buttons(message, call)
-                
+
             if call.data == 'end':
                 self.reverse = False
                 self.input_sentences = True
@@ -279,7 +279,7 @@ class Text(State):
                 if not self.text and not self.text_window:
                     self.text = call.message.text
                     self.text_window = call.message.message_id
-                
+
                 text_to_delete = self.text
 
                 db, sql = self.data_base(message, call)
@@ -326,12 +326,12 @@ class Text(State):
                         target = 'ru'
 
                     self.sent = GoogleTranslator(source='auto', target=target).translate(self.sent)
-                
+
                 bot.delete_message(chat_id=chat_id, message_id=self.question_window)
                 bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
                 self.sentence_buttons(message, call)
                 self.buttons(message, call)
-            
+
             # if call.data == 'voice':
             #     user_name = call.from_user.first_name
             #     folder_name = user_name + '(' + str(chat_id) + ')'
@@ -363,14 +363,14 @@ class Text(State):
                     else:
                         self.current_ids.pop(0)
                         self.printing(message, call)
-                    
+
             if call.data == 'next_minus':
                 if not self.free_input:
                     if len(self.current_ids) == 1:
                         pass
                     else:
                         self.current_ids.pop()
-                        self.printing(message, call) 
+                        self.printing(message, call)
 
 
             if call.data == 'plus':
@@ -394,7 +394,7 @@ class Text(State):
 
                 translated = GoogleTranslator(source=self.lang, target='ru').translate(self.word_to_write)
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=self.trans_window, text='<b>'+self.word_to_write+'</b>' + '\nозначает:\n' + translated, reply_markup=markup, parse_mode='html')
-            
+
             if call.data == 'minus':
                 self.slicer += -1
                 first_word = self.words.index(self.past_message)
@@ -424,12 +424,12 @@ class Text(State):
             #     item = types.InlineKeyboardButton('погнали!', callback_data='go')
             #     markup.add(item)
 
-            #     bot.send_message(call.from_user.id, 
+            #     bot.send_message(call.from_user.id,
             #     "Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", reply_markup=markup, parse_mode='html')
 
             # if call.data == 'go':
             #     bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", parse_mode='html')
-                
+
             #     self.sent_to_words(message, call)
 
     def sentence_buttons(self, message=None, call=None, state=None):
@@ -472,7 +472,7 @@ class Text(State):
         else:
             text = self.text
 
-        if call: 
+        if call:
             if call.data == 'translate':
 
                 def has_cyrillic(text):
@@ -524,13 +524,13 @@ class Text(State):
     def printing(self, message=None, call=None):
 
         current_words = []
-        self.word = None  
+        self.word = None
         for x in self.current_ids:
             current_words.append(self.words[x])
         self.word = ' '.join(current_words)
 
         self.menu(message, call)
-            
+
     def menu(self, message=None, call=None): #chat_id=None):
         if message:
             user_name = message.from_user.first_name
@@ -546,10 +546,10 @@ class Text(State):
         item4 = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='previus_minus')
         item6 = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='next_minus')
         item5 = types.InlineKeyboardButton('изменить', callback_data='change')
-        item7 = types.InlineKeyboardButton('записать', callback_data='write') 
+        item7 = types.InlineKeyboardButton('записать', callback_data='write')
 
         markup.add(item1,item2,item3,item4,item5,item6,item7)
-                
+
         sign = ''
 
         db, sql = self.data_base(message, call)
@@ -569,7 +569,7 @@ class Text(State):
                     self.translated_word = self.temp_word
                 else:
                     sign = '<b>Кинь свой перевод!</b>\n'
-            
+
             if self.adding:
                 if self.new_translate:
                     self.translated_word = self.translated_word + ', ' + self.temp_word
@@ -578,7 +578,7 @@ class Text(State):
         else:
             def has_cyrillic(text):
                 return bool(re.search('[а-яА-Я]', text))
-                    
+
             if has_cyrillic(self.word):
                 target = self.lang
             else:
@@ -589,7 +589,7 @@ class Text(State):
         text = sign+'<b>'+self.word+'</b>' + '\nозначает:\n' + '<b>'+self.translated_word+'</b>'
 
         bot.edit_message_text(chat_id=chat_id, message_id=self.trans_window, text=text, reply_markup=markup, parse_mode='html')
-        
+
     def vars(self, message=None, call=None, sents=None, count=None, lang=None):
         pass
 
@@ -615,7 +615,7 @@ class Text(State):
         #         if message.text == 'new_text':
         #             message.text = ''
         #             self.count = 0
-                
+
         # print(self.count, len(self.sents))
 
         # if self.count >= len(self.sents):
@@ -644,7 +644,7 @@ class Text(State):
         self.buttons(message, call)
 
     def buttons(self, message=None, call=None):
-        
+
         self.words = re.findall(r"[\w']+", self.sent)
 
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
@@ -665,7 +665,7 @@ class Text(State):
             bot.send_message(user_id, 'Выбери слово')
             write(user_name, user_id, message_id=self.last_message_id, target='last message')
 
-                
+
             return
 
     def name_id(self, message=None, call=None):
@@ -701,13 +701,13 @@ class Text(State):
                 sql.execute("INSERT INTO english VALUES (?, ?, ?)", (self.word, self.translated_word, self.sent))
                 db.commit()
 
-        for value in sql.execute("SELECT * FROM english"):
-            print(value)
+        # for value in sql.execute("SELECT * FROM english"):
+        #     print(value)
 
         bot.edit_message_text(chat_id=user_id, message_id=self.trans_window, text='Записано!\n' + '<b>'+self.word+'</b>' + ':\n' + '<b>'+self.translated_word+'</b>', parse_mode='html')
 
     def instructions(self, message=None, call=None):
-        
+
         user_name = message.from_user.first_name
         message_id = message.message_id
         user_id = message.chat.id
@@ -754,7 +754,7 @@ class Text(State):
             self.adding_input = False
 
             return
-            
+
         self.word = message.text
 
         try:
@@ -819,8 +819,8 @@ class Text(State):
 
                         if '.' not in slice:
                             while '.' not in slice:
-                                if len(slice)+symbols < 4000: 
-                                    slice = text[0:symbols+1000] 
+                                if len(slice)+symbols < 4000:
+                                    slice = text[0:symbols+1000]
                                     part += 1
                                 if len(slice) == len(data[title]):
                                     break
@@ -859,10 +859,10 @@ class Text(State):
         websites = "[.](com|net|org|io|gov)"
 
         def split_into_sentences(text):
-        
+
             text = " " + text + "  "
             # text = text.replace('-\n', '')
-            # text = text.replace("\n"," ") 
+            # text = text.replace("\n"," ")
             text = re.sub(prefixes,"\\1<prd>",text)
             text = re.sub(websites,"<prd>\\1",text)
             if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
@@ -887,11 +887,11 @@ class Text(State):
             sentences = [s.strip() for s in sentences]
             # print(sentences)
             return sentences
-        
+
         if call.data == 'build':
-            text = call.message.text 
+            text = call.message.text
 
         sents = split_into_sentences(self.text)
         # return sents
         # print(call.message.message_id)
-        self.sents_to_words(message, call, sents) 
+        self.sents_to_words(message, call, sents)

@@ -131,6 +131,7 @@ def get_message():
     return 'ok', 200
 
 bot.send_message(183278535, 'helo')
+app.run()
 
 # if __name__ == "__main__":
 #     """Client code"""

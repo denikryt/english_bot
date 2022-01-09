@@ -6,9 +6,11 @@ from bs4 import BeautifulSoup
 from database import connect
 from telebot import types
 from text import Text
-from nltk import tokenize 
+import nltk
+from nltk import tokenize
 
 class Wiki():
+    waiting_url_message = None
     navigator = False
     question_window = 0
     menu_window = 0
@@ -42,16 +44,17 @@ class Wiki():
 
         sql.execute("SELECT url FROM wiki WHERE title=(?)",(self.title,))
         url = sql.fetchone()[0]
+        nltk.download('punkt')
         summary = self.get_page(message, call).summary
         summary = tokenize.sent_tokenize(summary)[0]
-        text = '<b>'+self.title+'</b>' + '\n' + summary 
+        text = '<b>'+self.title+'</b>' + '\n' + summary
 
         markup = types.InlineKeyboardMarkup(row_width=3)
         item1 = types.InlineKeyboardButton('ссылка', url=url)
         item2 = types.InlineKeyboardButton('читать', callback_data='read')
         item3 = types.InlineKeyboardButton('удалить', callback_data='delete_wiki')
         markup.add(item1, item2, item3)
-        
+
         if self.navigator:
             bot.delete_message(chat_id=user_id, message_id=self.last_message)
             bot.edit_message_text(chat_id=user_id, message_id=self.menu_window, text=text, reply_markup=markup, parse_mode='html')
@@ -112,7 +115,7 @@ class Wiki():
                 self.titles.append(title[0])
             for url in result_u:
                 self.urls.append(url[0])
-            
+
         self.say_what(message, call)
 
     def say_what(self, message, call, i_title=0):
@@ -131,7 +134,9 @@ class Wiki():
             self.menu(message,call)
         else:
             bot.send_message(user_id, "Кинь мне ссылку на вики!")
+            self.navigator = False
             self.last_message += 1
+            self.waiting_url_message = self.last_message
 
     def instructions(self, message=None, call=None):
         db, sql = self.data_base(message,call)
@@ -141,7 +146,6 @@ class Wiki():
         if message.text.startswith('https://'):
             url, title = self.get_title(message,call)
             bot.delete_message(chat_id=user_id, message_id=self.last_message)
-            
 
             if not url in self.urls:
                 sql.execute("INSERT INTO wiki VALUES (?, ?)", (url, title))
@@ -149,13 +153,18 @@ class Wiki():
                 self.titles.append(title)
                 self.urls.append(url)
 
-                bot.delete_message(chat_id=user_id, message_id=self.menu_window)
-                bot.delete_message(chat_id=user_id, message_id=self.question_window)
-                self.navigator = False
-                
+                if self.navigator:
+                    bot.delete_message(chat_id=user_id, message_id=self.menu_window)
+                    bot.delete_message(chat_id=user_id, message_id=self.question_window)
+                    self.navigator = False
+
+                if self.waiting_url_message:
+                    bot.delete_message(chat_id=user_id, message_id=self.waiting_url_message)
+                    self.waiting_url_message = None
+
                 self.say_what(message,call, i_title=len(self.titles)-1)
             return
-            
+
         elif message.text in self.titles:
             if message.text == self.title:
                 bot.delete_message(chat_id=user_id, message_id=self.last_message)
@@ -199,6 +208,6 @@ class Wiki():
         self.context.hello(message,call, data=self.paragraphs, reason='wiki', last_message=self.last_message)
 
 
-        
-        
+
+
 

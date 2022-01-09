@@ -2,7 +2,7 @@ import sqlite3 as sql3
 from path import directory
 
 def connect(folder):
-  db = sql3.connect(directory(folder+'\\base.db'), check_same_thread=True)
+  db = sql3.connect(directory(folder+'/base.db'), check_same_thread=True)
   sql = db.cursor()
   # create(db, sql)
   return db, sql
