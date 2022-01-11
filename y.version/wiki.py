@@ -148,7 +148,7 @@ class Wiki():
             bot.delete_message(chat_id=user_id, message_id=self.last_message)
 
             if not url in self.urls:
-                sql.execute("INSERT INTO wiki VALUES (?, ?)", (url, title))
+                sql.execute("INSERT INTO wiki VALUES (?, ?, ?)", (url, title, 0))
                 db.commit()
                 self.titles.append(title)
                 self.urls.append(url)
@@ -205,7 +205,7 @@ class Wiki():
         bot.delete_message(chat_id=user_id, message_id=self.question_window)
 
         self.context.transition_to(Text())
-        self.context.hello(message,call, data=self.paragraphs, reason='wiki', last_message=self.last_message)
+        self.context.hello(message,call, data=self.paragraphs, reason='wiki', last_message=self.last_message, wiki_page=self.title)
 
 
 

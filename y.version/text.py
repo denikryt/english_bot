@@ -59,6 +59,7 @@ class Text(State):
     adding_input = False
     all_text = False
     reverse = False
+    wiki = False
 
     building = None
 
@@ -116,6 +117,7 @@ class Text(State):
         self.adding_input = False
         self.all_text = False
         self.reverse = False
+        self.wiki = False
 
         self.building = None
 
@@ -162,6 +164,9 @@ class Text(State):
 
 
             if call.data == 'next':
+                user_name, user_id, message_id = self.vars(message,call)
+                db, sql = self.data_base(message, call)
+
                 self.reverse = False
 
                 if len(self.all_texts) == 1:
@@ -177,6 +182,10 @@ class Text(State):
                     next_text = self.all_texts[self.text_count]
                     self.text = next_text
 
+                if self.wiki:
+                    sql.execute(f"UPDATE wiki SET sentence='{self.text_count}' WHERE title='{self.wiki_page}'")
+                    db.commit()
+
                 if self.building:
                     self.sent_count = 0
                     bot.delete_message(chat_id=chat_id, message_id=self.question_window)
@@ -187,6 +196,9 @@ class Text(State):
                 return
 
             if call.data == 'previous':
+                user_name, user_id, message_id = self.vars(message,call)
+                db, sql = self.data_base(message, call)
+
                 self.reverse = False
 
                 if len(self.all_texts) == 1:
@@ -201,6 +213,10 @@ class Text(State):
                     self.text_count -= 1
                     previus_text = self.all_texts[self.text_count]
                     self.text = previus_text
+
+                if self.wiki:
+                    sql.execute(f"UPDATE wiki SET sentence='{self.text_count}' WHERE title='{self.wiki_page}'")
+                    db.commit()
 
                 if self.building:
                     self.sent_count = 0
@@ -783,7 +799,7 @@ class Text(State):
             message_id = call.message.message_id
         return user_name, user_id, message_id
 
-    def hello(self, message=None, call=None, data=None, reason=None, last_message=None):
+    def hello(self, message=None, call=None, data=None, reason=None, last_message=None, wiki_page=None):
         user_name, user_id, message_id = self.vars(message,call)
         db, sql = self.data_base(message, call)
 
@@ -801,6 +817,17 @@ class Text(State):
                 pass
 
         if reason == 'wiki':
+            self.wiki = True
+            self.wiki_page = wiki_page
+            sql.execute("SELECT sentence FROM wiki WHERE title = ?",(wiki_page,))
+            index = sql.fetchall()[0][0]
+            if index == None:
+                sql.execute(f"UPDATE wiki SET sentence='{0}' WHERE title='{wiki_page}'")
+                db.commit()
+            else:
+                self.text_count = index
+            # заполнить пуcтые ячейки в sentences
+            # self.titles = titles
             self.last_message_id = last_message
             symbols = 500
 
@@ -836,7 +863,7 @@ class Text(State):
                     all_text = htmltitle +'\n'+ text
                     self.all_texts.append(all_text)
 
-            self.text = self.all_texts[0]
+            self.text = self.all_texts[self.text_count]
 
         bot.send_message(user_id, 'Получаю сообщения!')
         self.last_message_id += 1

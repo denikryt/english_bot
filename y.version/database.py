@@ -1,4 +1,5 @@
 import sqlite3 as sql3
+from sqlite3 import OperationalError
 from path import directory
 
 def connect(folder):
@@ -25,10 +26,16 @@ def create(db, sql):
 
   sql.execute("""CREATE TABLE IF NOT EXISTS wiki (
     url TEXT,
-    title TEXT
+    title TEXT,
+    sentence INT
   )""")
 
   db.commit()
+
+  try: sql.execute("""SELECT sentence FROM wiki""")
+  except OperationalError: 
+    sql.execute("""ALTER TABLE wiki ADD COLUMN sentence INT""") 
+    db.commit()
 
 # db, sql = connect('Ö(183278535)')
 # connect('Ö(183278535)')
