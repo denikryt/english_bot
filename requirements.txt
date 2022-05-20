@@ -1,0 +1,10 @@
+beautifulsoup4==4.11.1
+deep_translator==1.8.3
+emoji==1.7.0
+Flask==2.1.2
+flask_sslify==0.1.5
+nltk==3.7
+pyTelegramBotAPI==4.5.1
+PyYAML==6.0
+requests==2.27.1
+Wikipedia_API==0.5.4

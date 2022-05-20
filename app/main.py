@@ -17,8 +17,8 @@ from path import directory
 from users import write
 import datetime
 
-from flask_sslify import SSLify
-from flask import Flask, request
+# from flask_sslify import SSLify
+# from flask import Flask, request
 
 # URL = 'kentus.pythonanywhere.com'
 # app = Flask(__name__)
