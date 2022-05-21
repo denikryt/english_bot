@@ -260,7 +260,7 @@ if __name__ == "__main__":
 
     context = context.Context(default.Default())
     bot.remove_webhook()
-    bot.polling(none_stop=False)
+    bot.polling(none_stop=True)
 
 #     # tmp = threading.Thread(target=notification, args=())
 #     # tmp.start()
