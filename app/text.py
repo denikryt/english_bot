@@ -825,6 +825,7 @@ class Text(State):
                 sql.execute(f"UPDATE wiki SET sentence='{0}' WHERE title='{wiki_page}'")
                 db.commit()
             else:
+                # if index > len 
                 self.text_count = index
             # заполнить пуcтые ячейки в sentences
             # self.titles = titles
@@ -861,7 +862,12 @@ class Text(State):
 
                     htmltitle = '<b>'+title+'</b>'
                     all_text = htmltitle +'\n'+ text
-                    self.all_texts.append(all_text)
+                    self.all_texts.append(all_text) 
+            
+            if self.text_count > len(self.all_texts)-1:
+                self.text_count = 0
+                sql.execute(f"UPDATE wiki SET sentence='{0}' WHERE title='{self.wiki_page}'")
+                db.commit()
 
             self.text = self.all_texts[self.text_count]
 
