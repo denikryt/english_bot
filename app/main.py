@@ -17,18 +17,18 @@ from path import directory
 from users import write
 import datetime
 
-# from flask_sslify import SSLify
-# from flask import Flask, request
+from flask_sslify import SSLify
+from flask import Flask, request
 
-# URL = 'kentus.pythonanywhere.com'
-# app = Flask(__name__)
-# sslify = SSLify(app)
+URL = 'kentus.pythonanywhere.com'
+app = Flask(__name__)
+sslify = SSLify(app)
 
-# bot.remove_webhook()
-# bot.set_webhook(url=URL)
+bot.remove_webhook()
+bot.set_webhook(url=URL)
 
-# bot.send_message(183278535, 'helo')
-# context = context.Context(default.Default())
+bot.send_message(183278535, 'helo')
+context = context.Context(default.Default())
 
 time_to_wait = 10#600
 notify_delay = 10#3600
@@ -67,11 +67,11 @@ if result:
         # STATUS[id] = 'notify'
     # print(WORKING_USERS)
 
-# @app.route('/', methods=['POST', 'GET'])
-# def get_message():
-#     update = types.Update.de_json(request.stream.read().decode('utf-8'))
-#     bot.process_new_updates([update])
-#     return 'ok', 200
+@app.route('/', methods=['POST', 'GET'])
+def get_message():
+    update = types.Update.de_json(request.stream.read().decode('utf-8'))
+    bot.process_new_updates([update])
+    return 'ok', 200
 
 @bot.message_handler(commands=['wiki'])
 def language(message):
@@ -254,13 +254,12 @@ def send(chat_id, send_list):
     # except Exception as e:
     #     bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
+# if __name__ == "__main__":
+#     """Client code"""
 
-if __name__ == "__main__":
-    """Client code"""
-
-    context = context.Context(default.Default())
-    bot.remove_webhook()
-    bot.polling(none_stop=True)
+#     context = context.Context(default.Default())
+#     bot.remove_webhook()
+#     bot.polling(none_stop=True)
 
 #     # tmp = threading.Thread(target=notification, args=())
 #     # tmp.start()
