@@ -2,3 +2,5 @@
 config:
   token: 1452119723:AAGpVlSMu9uVKesX-i1gXtOas2RxxJd5WkI
   # token: 802217039:AAElHqEh459Wqnd4xxOGO4p7GKiT6GDDYHQ
+
+  #https://api.telegram.org/bot1452119723:AAGpVlSMu9uVKesX-i1gXtOas2RxxJd5WkI/sendMessage?chat_id=183278535&&text=hi

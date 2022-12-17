@@ -1,3 +1,18 @@
-.vscode/
-env/
-app/__pycache__/
+# Blocklist files/folders in same directory as the .gitignore file
+/*
+
+# Includelist some files
+!.Ö(183278535)/
+!bot.py
+!config.yaml
+!context.py
+!database.py
+!default.py
+!learn.py
+!main.py
+!path.py
+!state.py
+!text.py
+!users.py
+!users.yaml
+!wiki.py

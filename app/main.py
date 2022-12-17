@@ -9,7 +9,7 @@ import threading
 import sqlite3 as sql3
 from bot import BOT as bot
 import database
-# from notify import wait, notification
+# from notification import notify
 # from user import User
 from learn import Learn
 # from users import LAST_MESSAGE
@@ -20,26 +20,23 @@ import datetime
 from flask_sslify import SSLify
 from flask import Flask, request
 
-URL = 'kentus.pythonanywhere.com'
-app = Flask(__name__)
-sslify = SSLify(app)
-
-bot.remove_webhook()
-bot.set_webhook(url=URL)
-
-bot.send_message(183278535, 'helo')
-context = context.Context(default.Default())
-
 time_to_wait = 10#600
 notify_delay = 10#3600
 
 # LAST_MESSAGES = {}
-WORKING_USERS = {}
-CHAT_ID = {}
+USER_ACTIVITY = {}
+NAME_ID = {}
 STATUS = {}
 FIRST_MESSAGE = False
 global UPDATED
 UPDATED = False
+ACTIVE_TIMER = 10 #sec
+NOTIFY_DELAY = 10 #min
+
+MY_ID = 183278535
+
+# URL = 'kentus.pythonanywhere.com'
+# bot.set_webhook(url=URL)
 
 file_name = 'users.yaml'
 
@@ -61,17 +58,11 @@ with open(directory(file_name), 'r', encoding='utf-8') as f:
 if result:
     for name, data in result.items():
         id = result[name]['id']
-        # WORKING_USERS[id] = False
+        USER_ACTIVITY[id] = False
     # for name in result.keys():
-        CHAT_ID[name] = id
+        NAME_ID[name] = id
         # STATUS[id] = 'notify'
-    # print(WORKING_USERS)
-
-@app.route('/', methods=['POST', 'GET'])
-def get_message():
-    update = types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return 'ok', 200
+    # print(USER_ACTIVITY)
 
 @bot.message_handler(commands=['wiki'])
 def language(message):
@@ -79,11 +70,13 @@ def language(message):
     global UPDATED
     FIRST_MESSAGE = True
 
-    # try:
-    if not UPDATED:
-        user_name, user_id = name_id(message)
-        update_database(user_id, user_name)
+    user_name, user_id = get_name_id(message)
 
+    USER_ACTIVITY[user_id] = ACTIVE_TIMER
+
+    # try:
+    if not UPDATED: 
+        update_database(user_id, user_name)
         UPDATED = True
     # try:
     context.transition_to(default.Default())
@@ -104,15 +97,18 @@ def lang(message):
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
+    # return
     global FIRST_MESSAGE
     global UPDATED
     # if not FIen
     FIRST_MESSAGE = True
 
     # try:
-    user_name, user_id, message_id = name_id(message, get='message_id')
+    user_name, user_id, message_id = get_name_id(message, get='message_id')
 
-    if user_id not in CHAT_ID.values():
+    USER_ACTIVITY[user_id] = ACTIVE_TIMER
+
+    if user_id not in NAME_ID.values():
         # return
         new_user(user_id, user_name)
 
@@ -137,42 +133,53 @@ def welcome(message):
 
 @bot.message_handler(content_types=['text'])
 def lalala(message):
+    # return
     global FIRST_MESSAGE
     # if not FIRST_MESSAGE:
     #     return
     FIRST_MESSAGE = True
-    # try:
+    try:
     # return
-    user_name = message.from_user.first_name
-    user_id = message.chat.id
-    message_id = message.message_id
+        user_name, user_id, message_id = get_name_id(message, get='message_id')
 
-    folder_name = user_name + '(' + str(user_id) + ')'
-    db, sql = database.connect(folder_name)
-    database.create(db, sql)
+        USER_ACTIVITY[user_id] = ACTIVE_TIMER
+        print(f'ОБНОВЛЯЮ {USER_ACTIVITY[user_id]}')
 
-    if user_id not in CHAT_ID.values():
-        bot.send_message(user_id, 'напиши /start !')
-    else:
-        write(user_name, user_id, message_id=message_id, target='last message')
+        folder_name = user_name + '(' + str(user_id) + ')'
+        db, sql = database.connect(folder_name)
+        database.create(db, sql)
 
-        context.instructions(message)
+        if user_id not in NAME_ID.values():
+            bot.send_message(user_id, 'напиши /start !')
+        else:
+            write(user_name, user_id, message_id=message_id, target='last message')
 
-    # except Exception as e:
-    #     send_error(e)
+            context.instructions(message)
+
+    except Exception as e:
+        send_error(e)
 
 @bot.callback_query_handler(func=lambda call: True)
 def callback_inline(call):
-    # try:
-    if not FIRST_MESSAGE:
-        return
+    # return
 
-    context.inline_buttons(None,call)
+    user_name, user_id = get_name_id(call=call)
 
-    # except Exception as e:
-    #     send_error(e)
+    USER_ACTIVITY[user_id] = ACTIVE_TIMER
+    # print(f'ОБНОВЛЯЮ {USER_ACTIVITY[user_id]}')
+    try:
+    # if not FIRST_MESSAGE:
+    #     return
 
-def name_id(message=None, call=None, get=None):
+    # if call.data == 'guess' or 'new':
+    #     if context._state.__module__ != 'learn':
+    #         context.transition_to(default.Learn())
+        context.inline_buttons(None,call)
+
+    except Exception as e:
+        send_error(e)
+
+def get_name_id(message=None, call=None, get=None):
     if message:
         user_name = message.from_user.first_name
         user_id = message.chat.id
@@ -186,7 +193,7 @@ def name_id(message=None, call=None, get=None):
     return user_name, user_id
 
 def send_error(e):
-    bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
+    bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 def update_database(user_id, user_name):
     folder_name = user_name + '(' + str(user_id) + ')'
@@ -196,8 +203,8 @@ def update_database(user_id, user_name):
 def new_user(user_id, user_name):
     global UPDATED
     folder_name = user_name + '(' + str(user_id) + ')'
-    # WORKING_USERS[user_id] = time_to_wait
-    CHAT_ID[user_name] = user_id
+    # USER_ACTIVITY[user_id] = time_to_wait
+    NAME_ID[user_name] = user_id
 
     if os.path.isdir(directory(folder_name)) == False:
         os.mkdir(directory(folder_name))
@@ -211,58 +218,64 @@ def new_user(user_id, user_name):
     database.create(db, sql)
     UPDATED = True
 
-def wait():
+def notify():
+    last_notify = datetime.datetime.now()
+
     while True:
         time.sleep(1)
-        active = [user for user in WORKING_USERS if WORKING_USERS[user]]
-        for user in active:
-            waiting = WORKING_USERS[user]
-            WORKING_USERS[user] = waiting - 1
-            if WORKING_USERS[user] == 0:
-                WORKING_USERS[user] = False
-                STATUS[user] = 'notify'
-            print('MINUS', user, WORKING_USERS[user])
 
-def notification():
-    # try:
-    send_list = []
-    while True:
-        time.sleep(notify_delay)
-        for user in WORKING_USERS:
-            active = WORKING_USERS[user]
+        if USER_ACTIVITY[MY_ID] != False:
+            USER_ACTIVITY[MY_ID] -= 1
+            print(f'УДАЛЯЮ {USER_ACTIVITY[MY_ID]}')
+            if USER_ACTIVITY[MY_ID] == 0:
+                USER_ACTIVITY[MY_ID] = False
+                last_notify = datetime.datetime.now()
+        else:
+            if datetime.datetime.now().hour >= 8 <= 23: #?????
+                now = datetime.datetime.now()
 
-            if not active:
-                print('PLUS')
-                send_list.append(user)
-        # send_list = [183278535]
-        send(CHAT_ID, send_list)
+                time_passed = now - last_notify 
+                time_passed = int(time_passed.total_seconds()//60)
+                print(f'ПРОШЛО ВРЕМЕНИ {time_passed}')
 
-        send_list.clear()
+                if time_passed >= NOTIFY_DELAY:
+                    last_notify = datetime.datetime.now()
+                    context.transition_to(default.Learn())
+                    context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
 
-    # except Exception as e:
-    #     bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
-def send(chat_id, send_list):
-    # try:
-    for user_id in send_list:
-        user_name = list(chat_id.keys())[list(chat_id.values()).index(user_id)]
+def host_bot():
 
-        d = datetime.datetime.utcnow()
-        if d.hour >= 8 <= 24:
-            Learn.hello(Learn, user_name, user_id)
+    URL = 'kentus.pythonanywhere.com'
+    app = Flask(__name__)
+    sslify = SSLify(app)
 
-    # except Exception as e:
-    #     bot.send_message(183278535, "<b>ERROR!</b> {0}".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
+    bot.remove_webhook()
+    bot.set_webhook(url=URL)
 
-# if __name__ == "__main__":
-#     """Client code"""
+    bot.send_message(183278535, 'helo')
+    context = context.Context(default.Default())
 
-#     context = context.Context(default.Default())
-#     bot.remove_webhook()
-#     bot.polling(none_stop=True)
+# @app.route('/', methods=['POST', 'GET'])
+# def get_message():
+#     update = types.Update.de_json(request.stream.read().decode('utf-8'))
+#     bot.process_new_updates([update])
+#     return 'ok', 200
 
-#     # tmp = threading.Thread(target=notification, args=())
-#     # tmp.start()
+# host_bot()
+
+if __name__ == "__main__":
+    """Client code"""
+    # tmp = threading.Thread(target=notify, args=())
+    # tmp.start()
+
+    context = context.Context(default.Default())
+    # context.transition_to(default.Learn())
+    # context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
+    bot.remove_webhook()
+    bot.polling(none_stop=True)
+
+    
 #     # tmp2 = threading.Thread(target=wait, args=())
 #     # tmp2.start()
 

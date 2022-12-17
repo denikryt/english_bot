@@ -12,7 +12,8 @@ def create(db, sql):
   sql.execute("""CREATE TABLE IF NOT EXISTS english (
       word TEXT,
       translate TEXT,
-      sentence TEXT
+      sentence TEXT,
+      level INT
     )""")
 
   db.commit()
@@ -32,9 +33,9 @@ def create(db, sql):
 
   db.commit()
 
-  try: sql.execute("""SELECT sentence FROM wiki""")
+  try: sql.execute("""SELECT level FROM english""")
   except OperationalError: 
-    sql.execute("""ALTER TABLE wiki ADD COLUMN sentence INT""") 
+    sql.execute("""ALTER TABLE english ADD COLUMN level INT""") 
     db.commit()
 
 # db, sql = connect('Ö(183278535)')
