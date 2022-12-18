@@ -117,6 +117,8 @@ class Learn():
         sql.execute("SELECT word FROM english")
         result = sql.fetchall()
 
+        self.words = []
+
         for row in result:
             for word in row:
                 self.words.append(word)
@@ -165,8 +167,12 @@ class Learn():
         for x in r:
             for y in x:
                 l.append(y)
+        w = []
+        w = [100-x/len(l) for x in l]
+        relalive_weight = [x/sum(w) for x in w]
 
-        w = ()
+        return random.choices(self.words, weights=tuple(w), k=1)[0]
+
         l = list(set(l))
 
         for x in range(1,len(l)+1):
@@ -346,7 +352,14 @@ class Learn():
                 # sql.execute(f"SELECT level FROM english WHERE word = '{self.random_word}'")
                 # r = sql.fetchall()[0][0]
             
-                # sql.execute(f""" UPDATE english SET level='{0}' WHERE word="{self.random_word}" """)
+                sql.execute(f"UPDATE english SET level = {self.attempts + self.help} WHERE word = '{self.random_word}'")
+
+                # sql.execute("""UPDATE english SET level = {0} WHERE word = '{1}' """.format(self.attempts + self.help, self.random_word))
+                db.commit()
+
+                s = self.attempts + self.help
+
+                # sql.execute(f"UPDATE english SET level = '{s} ' WHERE word = '{self.random_word}'")
                 # db.commit()
 
                 bot.delete_message(user_id,message_id=self.keyboard_message)
@@ -358,6 +371,10 @@ class Learn():
                 text = f'СУПЕР!\n<b>{self.translate}</b>\nозначает\n<b>{self.random_word}</b>'
                 markup = types.InlineKeyboardMarkup(row_width=1)
                 markup.add(item3)
+
+                db, sql = self.data_base(user_name, user_id)
+                sql.execute(f""" UPDATE english SET level='{self.attempts + self.help}' WHERE word="{self.random_word}" """)
+                db.commit()
 
                 bot.delete_message(user_id,message_id=self.keyboard_message)
                 bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')

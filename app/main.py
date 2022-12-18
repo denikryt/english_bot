@@ -142,12 +142,12 @@ def lalala(message):
     # return
         user_name, user_id, message_id = get_name_id(message, get='message_id')
 
-        USER_ACTIVITY[user_id] = ACTIVE_TIMER
-        print(f'ОБНОВЛЯЮ {USER_ACTIVITY[user_id]}')
+        # USER_ACTIVITY[user_id] = ACTIVE_TIMER
+        # print(f'ОБНОВЛЯЮ {USER_ACTIVITY[user_id]}')
 
-        folder_name = user_name + '(' + str(user_id) + ')'
-        db, sql = database.connect(folder_name)
-        database.create(db, sql)
+        # folder_name = user_name + '(' + str(user_id) + ')'
+        # db, sql = database.connect(folder_name)
+        # database.create(db, sql)
 
         if user_id not in NAME_ID.values():
             bot.send_message(user_id, 'напиши /start !')

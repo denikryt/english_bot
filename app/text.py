@@ -711,10 +711,10 @@ class Text(State):
             db.commit()
         else:
             if self.free_input:
-                sql.execute("INSERT INTO english VALUES (?, ?, ?)", (self.word, self.translated_word, None))
+                sql.execute("INSERT INTO english VALUES (?, ?, ?, ?)", (self.word, self.translated_word, None, 0))
                 db.commit()
             else:
-                sql.execute("INSERT INTO english VALUES (?, ?, ?)", (self.word, self.translated_word, self.sent))
+                sql.execute("INSERT INTO english VALUES (?, ?, ?, ?)", (self.word, self.translated_word, self.sent, 0))
                 db.commit()
 
         # for value in sql.execute("SELECT * FROM english"):
