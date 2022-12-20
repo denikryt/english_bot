@@ -30,6 +30,7 @@ class Learn():
     result_window = 0
 
     guessing = False
+    test = False
 
     def data_base(self, user_name, user_id):
 
@@ -75,7 +76,7 @@ class Learn():
                 return
 
         if call.data == 'give_up':
-            self.send_message(message, call, case='loose')
+            self.send_message(message, call, case='give_up')
 
         if call.data == 'guess':
             self.guessing = True
@@ -99,6 +100,10 @@ class Learn():
             bot.delete_message(user_id, message_id=message_id)
             self.send_message(call=call, case = 'send')
 
+        if call.data == 'finish':
+            self.send_message(call=call, case = 'finish')
+
+
     def printing(self, chat_id=None):
         pass
 
@@ -117,6 +122,10 @@ class Learn():
         sql.execute("SELECT word FROM english")
         result = sql.fetchall()
 
+        if not self.test:
+            self.guessed = []
+
+        self.test = True
         self.words = []
 
         for row in result:
@@ -225,15 +234,6 @@ class Learn():
 
     def start(self, message=None, call=None, user_id=None):
         # user_name, user_id = self.name_id(message, call)
-        # if not call:
-        #     if not user_id:
-        #         self.last_message = message.message_id
-        #     else:
-        #         self.last_message = 0
-
-        # self.random_word = random.choice(self.temp_choise_list)
-        # self.random_word = 'dramatic improvement'
-        # self.translate = ','.join(self.vocab[self.random_word])
 
         self.loose = False
         self.attempts = 3
@@ -288,11 +288,14 @@ class Learn():
                 if self.attempts > 0:
                     self.send_message(message,call,case='incorrect')
                 else:
+                    self.help = 0 
                     self.send_message(message,call, case='loose')
         else:
             if self.loose:
                 return
             else:
+                self.help = 0 
+                self.attempts = 0
                 self.send_message(message, call, case='loose')
                 self.loose = True
 
@@ -300,7 +303,8 @@ class Learn():
         # if not user_id:
         #     user_name, user_id = self.name_id(message, call)
 
-        cases = ['correct', 'incorrect', 'help']        
+        cases = ['correct', 'incorrect', 'help'] 
+        result = ['win', 'fast_win', 'loose', 'give_up'] 
 
         markup = types.InlineKeyboardMarkup(row_width=2)
 
@@ -308,6 +312,8 @@ class Learn():
         item2 = types.InlineKeyboardButton('Сдаюсь', callback_data='give_up')
         item3 = types.InlineKeyboardButton('Новое слово', callback_data='new')
         item4 = types.InlineKeyboardButton('Отгадать', callback_data='guess')
+        item5 = types.InlineKeyboardButton('Закончить', callback_data='finish')
+
 
         if case == 'new word':
             text = f'Переведи слово\n<b>{self.translate}</b>'
@@ -341,26 +347,24 @@ class Learn():
                 bot.delete_message(chat_id=user_id, message_id=message_id)
                 return
 
+            if case in result:
+                if case == 'give_up':
+                    mark = 0
+                else:
+                    mark = self.attempts + self.help
+                self.guessed.append(self.translate +' - '+ self.random_word +' : '+ str(mark))    
+
             if case == 'win':
                 self.guessing = False
 
                 text = f'Правильно!\n<b>{self.translate}</b>\nозначает\n<b>{self.random_word}</b>'
                 markup = types.InlineKeyboardMarkup(row_width=1)
-                markup.add(item3)
+                markup.add(item3, item5)
 
                 db, sql = self.data_base(user_name, user_id)
-                # sql.execute(f"SELECT level FROM english WHERE word = '{self.random_word}'")
-                # r = sql.fetchall()[0][0]
             
                 sql.execute(f"UPDATE english SET level = {self.attempts + self.help} WHERE word = '{self.random_word}'")
-
-                # sql.execute("""UPDATE english SET level = {0} WHERE word = '{1}' """.format(self.attempts + self.help, self.random_word))
                 db.commit()
-
-                s = self.attempts + self.help
-
-                # sql.execute(f"UPDATE english SET level = '{s} ' WHERE word = '{self.random_word}'")
-                # db.commit()
 
                 bot.delete_message(user_id,message_id=self.keyboard_message)
                 bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
@@ -370,7 +374,7 @@ class Learn():
 
                 text = f'СУПЕР!\n<b>{self.translate}</b>\nозначает\n<b>{self.random_word}</b>'
                 markup = types.InlineKeyboardMarkup(row_width=1)
-                markup.add(item3)
+                markup.add(item3, item5)
 
                 db, sql = self.data_base(user_name, user_id)
                 sql.execute(f""" UPDATE english SET level='{self.attempts + self.help}' WHERE word="{self.random_word}" """)
@@ -379,16 +383,30 @@ class Learn():
                 bot.delete_message(user_id,message_id=self.keyboard_message)
                 bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
 
-            if case == 'loose':
+            if case == 'loose' or case == 'give_up':
 
                 text = f'Проиграл!\n<b>{self.translate}</b>\noзначает\n<b>{self.random_word}</b>'
                 markup = types.InlineKeyboardMarkup(row_width=1)
-                markup.add(item3)
+                markup.add(item3, item5)
 
                 if self.guessing:
                     self.guessing = False
                     bot.delete_message(user_id,message_id=self.keyboard_message)
                 
                 bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
+            if case == 'finish':
+                self.test = False
+
+                text = f'Молодец!\n<b>{self.translate}</b>\noзначает\n<b>{self.random_word}</b>'
+                markup = types.InlineKeyboardMarkup(row_width=1)
+                markup.add(item3)
+
+                text = f'Молодец!\nТвой результат:\n'
+                for x in self.guessed:
+                    text += x + '\n'
+                
+                bot.edit_message_text(chat_id=user_id, message_id=self.game_window, text=text, reply_markup=markup, parse_mode='html')
+
 
         # return

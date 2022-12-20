@@ -19,9 +19,12 @@ import datetime
 
 from flask_sslify import SSLify
 from flask import Flask, request
+import nltk
 
 time_to_wait = 10#600
 notify_delay = 10#3600
+
+nltk.download('punkt')
 
 # LAST_MESSAGES = {}
 USER_ACTIVITY = {}
@@ -34,9 +37,6 @@ ACTIVE_TIMER = 10 #sec
 NOTIFY_DELAY = 10 #min
 
 MY_ID = 183278535
-
-# URL = 'kentus.pythonanywhere.com'
-# bot.set_webhook(url=URL)
 
 file_name = 'users.yaml'
 
@@ -72,12 +72,12 @@ def language(message):
 
     user_name, user_id = get_name_id(message)
 
-    USER_ACTIVITY[user_id] = ACTIVE_TIMER
+    # USER_ACTIVITY[user_id] = ACTIVE_TIMER
 
-    # try:
-    if not UPDATED: 
-        update_database(user_id, user_name)
-        UPDATED = True
+    # # try:
+    # if not UPDATED: 
+    #     update_database(user_id, user_name)
+    #     UPDATED = True
     # try:
     context.transition_to(default.Default())
     context.instructions(message)

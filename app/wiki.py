@@ -44,7 +44,7 @@ class Wiki():
 
         sql.execute("SELECT url FROM wiki WHERE title=(?)",(self.title,))
         url = sql.fetchone()[0]
-        nltk.download('punkt')
+        # nltk.download('punkt')
         summary = self.get_page(message, call).summary
         summary = tokenize.sent_tokenize(summary)[0]
         text = '<b>'+self.title+'</b>' + '\n' + summary

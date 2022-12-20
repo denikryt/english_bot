@@ -36,7 +36,7 @@ def create(db, sql):
   try: sql.execute("""SELECT level FROM english""")
   except OperationalError: 
     sql.execute("""ALTER TABLE english ADD COLUMN level INT""") 
-    db.commit()
+  db.commit()
 
 # db, sql = connect('Ö(183278535)')
 # connect('Ö(183278535)')
