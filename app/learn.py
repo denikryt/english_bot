@@ -132,33 +132,38 @@ class Learn():
             for word in row:
                 self.words.append(word)
 
-        sql.execute("SELECT translate  FROM english")
-        result = sql.fetchall()
+        # sql.execute("SELECT translate  FROM english")
+        # result = sql.fetchall()
 
-        split_t = []
+        # split_t = []
 
-        for row in result:
-            for translate in row:
-                split_t.append(translate)
+        # for row in result:
+        #     for translate in row:
+        #         split_t.append(translate)
 
-        sql.execute("SELECT sentence FROM english")
-        result = sql.fetchall()
+        # sql.execute("SELECT sentence FROM english")
+        # result = sql.fetchall()
 
-        sents = []
+        # sents = []
 
-        for row in result:
-            for sentence in row:
-                sents.append(sentence)
+        # for row in result:
+        #     for sentence in row:
+        #         sents.append(sentence)
 
-        self.repeat = self.words.copy()
-        self.trans = [j for i in split_t for j in [i.split(',')]]
+        # self.repeat = self.words.copy()
+        # self.trans = [j for i in split_t for j in [i.split(',')]]
 
-        self.vocab = OrderedDict(zip(self.words, self.trans))
-        self.sents = OrderedDict(zip(self.words, sents))
-        self.temp_choise_list = self.repeat.copy()
+        # self.vocab = OrderedDict(zip(self.words, self.trans))
+        # self.sents = OrderedDict(zip(self.words, sents))
+        # self.temp_choise_list = self.repeat.copy()
 
         self.random_word = self.select_word(sql)
-        self.translate = ','.join(self.vocab[self.random_word])
+
+        sql.execute(f"SELECT translate FROM english WHERE word='{self.random_word}'")
+        self.translate = sql.fetchall()[0][0]
+
+        sql.execute(f"SELECT level FROM english WHERE word='{self.random_word}'")
+        self.mark = sql.fetchall()[0][0]
 
         self.start()
 
@@ -178,7 +183,7 @@ class Learn():
                 l.append(y)
         w = []
         w = [100-x/len(l) for x in l]
-        relalive_weight = [x/sum(w) for x in w]
+        # relalive_weight = [x/sum(w) for x in w]
 
         return random.choices(self.words, weights=tuple(w), k=1)[0]
 
@@ -352,7 +357,7 @@ class Learn():
                     mark = 0
                 else:
                     mark = self.attempts + self.help
-                self.guessed.append(self.translate +' - '+ self.random_word +' : '+ str(mark))    
+                self.guessed.append(self.translate +' - '+ self.random_word +' : '+ str(self.mark) +' +'+ str(mark))    
 
             if case == 'win':
                 self.guessing = False
@@ -398,7 +403,6 @@ class Learn():
             if case == 'finish':
                 self.test = False
 
-                text = f'Молодец!\n<b>{self.translate}</b>\noзначает\n<b>{self.random_word}</b>'
                 markup = types.InlineKeyboardMarkup(row_width=1)
                 markup.add(item3)
 

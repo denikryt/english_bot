@@ -244,36 +244,34 @@ def notify():
                     context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
 
 
-def host_bot():
+URL = 'kentus.pythonanywhere.com'
+app = Flask(__name__)
+sslify = SSLify(app)
 
-    URL = 'kentus.pythonanywhere.com'
-    app = Flask(__name__)
-    sslify = SSLify(app)
+bot.remove_webhook()
+bot.set_webhook(url=URL)
 
-    bot.remove_webhook()
-    bot.set_webhook(url=URL)
+bot.send_message(183278535, 'helo')
+context = context.Context(default.Default())
 
-    bot.send_message(183278535, 'helo')
-    context = context.Context(default.Default())
-
-# @app.route('/', methods=['POST', 'GET'])
-# def get_message():
-#     update = types.Update.de_json(request.stream.read().decode('utf-8'))
-#     bot.process_new_updates([update])
-#     return 'ok', 200
+@app.route('/', methods=['POST', 'GET'])
+def get_message():
+    update = types.Update.de_json(request.stream.read().decode('utf-8'))
+    bot.process_new_updates([update])
+    return 'ok', 200
 
 # host_bot()
 
-if __name__ == "__main__":
-    """Client code"""
-    # tmp = threading.Thread(target=notify, args=())
-    # tmp.start()
+# if __name__ == "__main__":
+#     """Client code"""
+#     # tmp = threading.Thread(target=notify, args=())
+#     # tmp.start()
 
-    context = context.Context(default.Default())
-    # context.transition_to(default.Learn())
-    # context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
-    bot.remove_webhook()
-    bot.polling(none_stop=True)
+#     context = context.Context(default.Default())
+#     # context.transition_to(default.Learn())
+#     # context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
+#     bot.remove_webhook()
+#     bot.polling(none_stop=True)
 
     
 #     # tmp2 = threading.Thread(target=wait, args=())
