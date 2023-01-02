@@ -185,6 +185,7 @@ class Wiki():
         wiki_wiki = wikipediaapi.Wikipedia(lang)
         page_py = wiki_wiki.page(self.title)
 
+        self.paragraphs = {}
         self.paragraphs['Summary'] = page_py.summary
 
         return page_py

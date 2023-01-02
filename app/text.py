@@ -819,6 +819,7 @@ class Text(State):
         if reason == 'wiki':
             self.wiki = True
             self.wiki_page = wiki_page
+            self.all_texts = []
             sql.execute("SELECT sentence FROM wiki WHERE title = ?",(wiki_page,))
             index = sql.fetchall()[0][0]
             if index == None:
@@ -838,30 +839,39 @@ class Text(State):
                 parts = int(len(text)/symbols) +1
                 part_index = 0
                 part = 0
+                
+                def to_last_point(part_index):
+                    end = slice.rindex('.')
+                    part_index += end+1
+                    final_text = slice[0:end+1]
+                    return part_index, final_text
 
                 while not part == parts:
                     part += 1
                     if parts > 1:
-                        text = data[title][part_index:]
-                        slice = text[0:symbols]
+                        section = data[title][part_index:]
+                        slice = section[0:symbols]
 
                         if '.' not in slice:
                             while '.' not in slice:
                                 if len(slice)+symbols < 4000:
-                                    slice = text[0:symbols+1000]
+                                    slice = section[0:len(slice)+symbols]
                                     part += 1
-                                if len(slice) == len(data[title]):
-                                    break
-                            text = slice
-                        else:
-                            end = slice.rindex('.')
-                            part_index += end+1
-                            text = slice[0:end+1]
-                    else:
-                        pass
+                                    if '.' in slice:
+                                        part_index, final_text = to_last_point(part_index)
+                                        break
+
+                                if len(slice) >= len(section):
+                                    if '.' not in slice:
+                                        final_text = slice
+                                    else:
+                                        part_index, final_text = to_last_point(part_index)
+                                    break   
+                        else: 
+                            part_index, final_text = to_last_point(part_index)
 
                     htmltitle = '<b>'+title+'</b>'
-                    all_text = htmltitle +'\n'+ text
+                    all_text = htmltitle +'\n'+ final_text
                     self.all_texts.append(all_text) 
             
             if self.text_count > len(self.all_texts)-1:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from telebot import types
+import traceback
 import yaml
 import context
 import default
@@ -193,7 +194,8 @@ def get_name_id(message=None, call=None, get=None):
     return user_name, user_id
 
 def send_error(e):
-    bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
+    tb = traceback.format_exc()
+    bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(tb)+'\n'+str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 def update_database(user_id, user_name):
     folder_name = user_name + '(' + str(user_id) + ')'
@@ -244,34 +246,34 @@ def notify():
                     context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
 
 
-URL = 'kentus.pythonanywhere.com'
-app = Flask(__name__)
-sslify = SSLify(app)
+# URL = 'kentus.pythonanywhere.com'
+# app = Flask(__name__)
+# sslify = SSLify(app)
 
-bot.remove_webhook()
-bot.set_webhook(url=URL)
+# bot.remove_webhook()
+# bot.set_webhook(url=URL)
 
-bot.send_message(183278535, 'helo')
-context = context.Context(default.Default())
+# bot.send_message(183278535, 'helo')
+# context = context.Context(default.Default())
 
-@app.route('/', methods=['POST', 'GET'])
-def get_message():
-    update = types.Update.de_json(request.stream.read().decode('utf-8'))
-    bot.process_new_updates([update])
-    return 'ok', 200
+# @app.route('/', methods=['POST', 'GET'])
+# def get_message():
+#     update = types.Update.de_json(request.stream.read().decode('utf-8'))
+#     bot.process_new_updates([update])
+#     return 'ok', 200
 
 # host_bot()
 
-# if __name__ == "__main__":
-#     """Client code"""
-#     # tmp = threading.Thread(target=notify, args=())
-#     # tmp.start()
+if __name__ == "__main__":
+    """Client code"""
+    # tmp = threading.Thread(target=notify, args=())
+    # tmp.start()
 
-#     context = context.Context(default.Default())
-#     # context.transition_to(default.Learn())
-#     # context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
-#     bot.remove_webhook()
-#     bot.polling(none_stop=True)
+    context = context.Context(default.Default())
+    # context.transition_to(default.Learn())
+    # context.hello(case='notify', user_name='Ö', user_id=MY_ID,)
+    bot.remove_webhook()
+    bot.polling(none_stop=True)
 
     
 #     # tmp2 = threading.Thread(target=wait, args=())
