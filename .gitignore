@@ -2,7 +2,6 @@
 /*
 
 # Includelist some files
-# !.Ö(183278535)/
 !bot.py
 !config.yaml
 !context.py
@@ -16,4 +15,3 @@
 !users.py
 !users.yaml
 !wiki.py
-app/Ö(183278535)/base.db
