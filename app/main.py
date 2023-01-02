@@ -194,8 +194,9 @@ def get_name_id(message=None, call=None, get=None):
     return user_name, user_id
 
 def send_error(e):
-    tb = traceback.format_exc()
-    bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(tb)+'\n'+str(e.args[0])).encode("utf-8"), parse_mode='html')
+    # tb = traceback.format_exc()
+    # bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(tb)+'\n'+str(e.args[0])).encode("utf-8"), parse_mode='html')
+    bot.send_message(183278535, "<b>ERROR!</b> {0} \npress /start".format(str(e.args[0])).encode("utf-8"), parse_mode='html')
 
 def update_database(user_id, user_name):
     folder_name = user_name + '(' + str(user_id) + ')'

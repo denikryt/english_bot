@@ -76,6 +76,7 @@ class Learn():
                 return
 
         if call.data == 'give_up':
+            self.loose = True
             self.send_message(message, call, case='give_up')
 
         if call.data == 'guess':
@@ -260,6 +261,10 @@ class Learn():
         #     return
 
         self.last_message = message.message_id
+        
+        if self.loose:
+            self.send_message(message, call, case='delete', message_id=self.last_message)
+            return
 
         text = message.text.strip().lower()
         word = self.random_word.lower()

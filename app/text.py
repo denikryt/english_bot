@@ -806,6 +806,8 @@ class Text(State):
         self.text_count = 0
         self.sent_count = 0
         self.input_sentences = True
+        self.building = False
+        self.new_sentence = False
 
         if not reason:
             self.last_message_id = message_id
