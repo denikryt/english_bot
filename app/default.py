@@ -144,6 +144,7 @@ class Default(State):
 
         if message.text == 'Тестики':
             self.context.transition_to(Learn())
+            self.context.reset()
             self.context.hello(message, None)
             return
 

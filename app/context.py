@@ -1,6 +1,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from state import State
+from default import Default
 
 class Context:
     """
@@ -27,6 +28,9 @@ class Context:
         print(f"Context: Transition to {type(state).__name__}")
         self._state = state
         self._state.context = self
+
+    def set_default_state(self):
+        self._state = Default()
 
     """
     Контекст делегирует часть своего поведения текущему объекту Состояния.

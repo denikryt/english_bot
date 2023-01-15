@@ -1,7 +1,6 @@
 import yaml
 from path import directory
 
-
 def open_yaml():
     file_name = 'users.yaml'
     with open(directory(file_name),'r', encoding='utf-8') as yamlfile:
@@ -16,20 +15,20 @@ def write(user_name, user_id, message_id=None, target=str):
 
     if target == 'new user':
         data = {
-            user_name:{
-                'id':user_id
+            user_id:{
+                'name':user_name
             }
         }
         cur_yaml['users'].update(data)
 
     if target == 'last message':
         data = {'last message':message_id}
-        cur_yaml['users'][user_name].update(data)
+        cur_yaml['users'][user_id].update(data)
 
     if target == 'last notify':
-        last_message = cur_yaml['users'][user_name]['last message']
+        last_message = cur_yaml['users'][user_id]['last message']
         data = {'last message':last_message+1, 'last notify':last_message+1}
-        cur_yaml['users'][user_name].update(data)
+        cur_yaml['users'][user_id].update(data)
 
     if cur_yaml:
         with open(directory(file_name),'w', encoding='utf-8') as yamlfile:
