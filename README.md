@@ -1,29 +1,8 @@
 # Telegram Language Learning Bot
 
-This is a Telegram bot that allows users to learn foreign languages directly in their Telegram chats. The bot is built using Python and relies on the Google Cloud Translate API to provide accurate translations.
+This Telegram bot allows users to learn foreign language words by uploading direct text or by scraping text from Wikipedia pages using a link. The bot separates text by sentences and creates a button for each word from the sentence that the user is working on. By pressing a button, the bot replies with the translation of the word to the user's native language, as well as arrow buttons to add or delete the next and previous words from the sentence to get the translation of the needed word in the phrase context. 
 
-## Features
-
-- The bot can translate text from one language to another in real-time.
-- Users can practice their language skills by taking quizzes.
-- The bot can provide definitions for words in different languages.
-- The bot can also provide audio pronunciations for words in different languages.
-
-## Getting Started
-
-To use the bot, simply search for it in Telegram and start a chat with it. Once you've started a chat, you can type `/help` to see a list of available commands.
-
-## Commands
-
-- `/translate <text>` - Translate text from one language to another.
-- `/quiz` - Take a language quiz to practice your skills.
-- `/define <word>` - Get the definition of a word in a given language.
-- `/pronounce <word>` - Get the audio pronunciation of a word in a given language.
-- `/help` - Show a list of available commands.
-
-## Contributing
-
-Contributions are welcome! If you'd like to contribute to the project, feel free to open a pull request.
+Users can save words in their database for test-games. In the test-game, the bot sends a message with the translation of a relevant-to-learn word from the user's database and "*" characters in the count of the original word's letters. The bot also creates buttons with shuffled word's letters, and the user has to spell the word correctly. Users have three tries and three clues, and the usage of tries and clues affects a word's mark. The word's mark has an effect on the bot's random choice in the test-game to send words that the user is most likely learned worse than others.
 
 ## License
 
