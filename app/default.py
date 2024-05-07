@@ -24,6 +24,10 @@ class Default(State):
         'Китайский' : 'zh-tw',
     }
 
+    def save_text(self,message=None, call=None):
+        
+        pass
+
     def language(self, message=None, call=None):
         self.context.transition_to(Text())
         self.context.language(message,call)
@@ -147,6 +151,11 @@ class Default(State):
             self.context.reset()
             self.context.hello(message, None)
             return
+        
+        if message.text == '/texts':
+            self.context.transition_to(Text())
+            self.context.hello(message, call)
+            return
 
         if message.text == '/wiki':
             self.context.transition_to(Wiki())
@@ -169,5 +178,9 @@ class Default(State):
             self.context.hello(message, None)
             return
 
-        # else:
-        #     bot.send_message(message.chat.id, 'Что?')
+        else:
+            bot.send_message(message.chat.id, 'Что?')
+
+
+    def work_with_text(self, db_name, text_id):
+        pass

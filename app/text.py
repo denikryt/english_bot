@@ -1,18 +1,29 @@
-from deep_translator import GoogleTranslator
+from deep_translator import GoogleTranslator, single_detection
 from telebot import types
 from state import State
 from bot import BOT as bot
 from database import connect#, db, sql
 from users import write
-# from main import LAST_MESSAGES
-# from gtts import gTTS
+from path import directory
 import re
 import emoji
+import mongodb_database
+import yaml
+from windows import Window
+from iso639 import languages
+
+
+CONFIGFILE = 'config.yaml'
 
 class Text(State):
     """
-    Description
+    Descriptions
     """
+
+    mongo_db = mongodb_database.MongoDataBase()
+
+    with open(directory(CONFIGFILE), 'r') as f:
+        lang_detect_token = yaml.load(f, Loader=yaml.FullLoader)['config']['detect_language']
 
     langs = {
         'Английский' : 'en',
@@ -22,7 +33,7 @@ class Text(State):
         'Китайский' : 'zh-tw',
     }
 
-    slicer = 0
+    
     sent_id = 0
     sent_count = 0
     text_count = 0
@@ -50,213 +61,154 @@ class Text(State):
     words = []
     current_ids = []
     all_texts = []
+    slicer = []
 
+    translating_text = False
+    translating_sent = False
     changing_lang = False
     new_translate = False
     free_input = False
-    changing = False
-    adding = False
+    changing_word = False
+    adding_word = False
     adding_input = False
     all_text = False
     reverse = False
     wiki = False
+    translated = False
 
     building = None
 
-    def language(self, message=None, call=None):
-        user_id = message.chat.id
-        user_name = message.from_user.first_name
-        message_id = message.message_id
-        self.changing_lang = True
-        self.messages_while_changing += 2
 
-        items = ['Английский', 'Турецкий', 'Французский', 'Итальянский', 'Китайский']
-
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        items = [types.KeyboardButton(item) for item in items]
-        markup.add(*items)
-
-        bot.send_message(user_id, 'C каким языком будешь работать?', reply_markup=markup)
-        write(user_name, user_id, message_id=message_id+1, target='last message')
-
-
-    def reset(self):
-        self.changing_lang = False
-        self.messages_while_changing = 0
-        self.slicer = 0
-        self.sent_id = 0
-        self.sent_count = 0
-        self.text_count = 0
-        self.output_messages = 0
-        self.input_messages = 0
-        self.index_word = 0
-        self.last_message_id = 0
-
-        self.text_window = 0
-        self.trans_window = 0
-        self.question_window = 0
-
-        self.word = ''
-        self.word_to_write = ''
-        self.user_past = ''
-        self.sent = ''
-        self.translated_word = ''
-        self.temp_word = ''
-        self.lang = 'en'
-        self.text = ''
-
-        self.sents = []
-        self.words = []
-        self.current_ids = []
-        self.all_texts = []
-
-        self.new_translate = False
-        self.free_input = False
-        self.changing = False
-        self.adding = False
-        self.adding_input = False
-        self.all_text = False
-        self.reverse = False
-        self.wiki = False
-
-        self.building = None
-
-    def data_base(self, message=None, call=None):
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call:
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
-
-        folder_name = user_name + '(' + str(user_id) + ')'
-        db, sql = connect(folder_name)
-        return db, sql
 
     def inline_buttons(self, message=None, call=None):
         if call.message:
-            chat_id = call.message.chat.id
+            user_id = call.message.chat.id
             message_id = call.message.message_id
 
-            if call.data == 'write':
-                self.write_word(message, call)
+            if call.data == 'save_word':
+                result = self.save_word(user_id)
 
-            if call.data == 'change':
-                self.changing = True
-                self.adding_input = True
-                # self.translated_word = 'Кинь свой перевод!'
-                self.menu(message, call)
+                if result:
+                    self.word_window.text = f'Слово записано!\n{self.word_window.text}'
+                else:
+                    self.word_window.text = f'Слово не записано!\n{self.word_window.text}'
 
-            if call.data == 'adding':
-                self.adding = True
-                self.adding_input = True
-                # self.translated_word = 'Добавь перевод!'
-                self.menu(message, call)
+                self.word_window.edit(user_id=user_id)
 
+            if call.data == 'change_translate':
+                self.changing_word = True
+                self.word_window.text = f'Кинь свой перевод!\n{self.word_window.text}'
+                self.word_window.edit(user_id=user_id)
 
-            if call.data == 'translate':
-                self.sentence_buttons(message, call)
-                return
+            if call.data == 'add_translate':
+                self.adding_word = True
+                self.word_window.text = f'Добавь перевод!\n{self.word_window.text}'
+                self.word_window.edit(user_id=user_id)
 
-            if call.data == 'original':
-                self.sentence_buttons(message, call)
-                return
+            if call.data == 'translate_text':
+                self.translating_text = True
+                translated_text = self.translate(self.text)
+                self.visual_text = translated_text
 
+                self.text_window.text = self.visual_text
+                self.text_window.markup = self.text_window_buttons()
+                self.text_window.edit(user_id=user_id)
 
-            if call.data == 'next':
-                user_name, user_id, message_id = self.vars(message,call)
-                db, sql = self.data_base(message, call)
+            if call.data == 'translate_sent':
+                self.translating_sent = True
+                translated_sent = self.translate(self.sent)
 
-                self.reverse = False
+                self.sentence_window.text = translated_sent
+                self.sentence_window.markup = self.sentence_window_buttons()    
+                self.sentence_window.edit(user_id=user_id)
+
+            if call.data == 'original_text':
+                self.translating_text = False
+                self.visual_text = self.text
+
+                self.text_window.text = self.visual_text
+                self.text_window.markup = self.text_window_buttons()
+                self.text_window.edit(user_id=user_id)
+            
+            if call.data == 'original_sent':
+                self.translating_sent = False
+                
+                self.sentence_window.text = self.sent
+                self.sentence_window.markup = self.sentence_window_buttons()
+                self.sentence_window.edit(user_id=user_id)
+
+            if call.data == 'next_text':
+                self.translating_text = False
 
                 if len(self.all_texts) == 1:
+                    return
+                
+                elif len(self.all_texts) == 0:
+                    bot.send_message(user_id, 'Текстов нет')
                     return
 
                 elif self.text_count == len(self.all_texts)-1:
                     self.text_count = 0
-                    next_text = self.all_texts[self.text_count]
-                    self.text = next_text
+                    self.text = self.all_texts[0]
 
                 elif self.text_count >= 0:
                     self.text_count += 1
-                    next_text = self.all_texts[self.text_count]
-                    self.text = next_text
-
-                if self.wiki:
-                    sql.execute(f"UPDATE wiki SET sentence='{self.text_count}' WHERE title='{self.wiki_page}'")
-                    db.commit()
+                    self.text = self.all_texts[self.text_count]
+                    
+                self.visual_text = self.text
+                self.text_window.text = self.visual_text
+                self.text_window.markup = self.text_window_buttons()
+                self.text_window.edit(user_id=user_id)
 
                 if self.building:
-                    self.sent_count = 0
-                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
-                    bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
-                    self.text_to_sents(message, call)
-
-                self.sentence_buttons(message, call)
+                    self.build(message, call)
+                
                 return
 
-            if call.data == 'previous':
-                user_name, user_id, message_id = self.vars(message,call)
-                db, sql = self.data_base(message, call)
-
-                self.reverse = False
+            if call.data == 'previous_text':
+                self.translating_text = False
 
                 if len(self.all_texts) == 1:
+                    return
+                
+                elif len(self.all_texts) == 0:
+                    bot.send_message(user_id, 'Текстов нет')
                     return
 
                 elif self.text_count == 0:
                     self.text_count = len(self.all_texts)-1
-                    previus_text = self.all_texts[self.text_count]
-                    self.text = previus_text
+                    self.text = self.all_texts[self.text_count]
 
                 elif self.text_count <= len(self.all_texts)-1:
                     self.text_count -= 1
-                    previus_text = self.all_texts[self.text_count]
-                    self.text = previus_text
+                    self.text = self.all_texts[self.text_count]
 
-                if self.wiki:
-                    sql.execute(f"UPDATE wiki SET sentence='{self.text_count}' WHERE title='{self.wiki_page}'")
-                    db.commit()
+                self.visual_text = self.text
+                self.text_window.text = self.visual_text
+                self.text_window.markup = self.text_window_buttons()
+                self.text_window.edit(user_id=user_id)
 
                 if self.building:
-                    self.sent_count = 0
-                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
-                    bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
-                    self.text_to_sents(message, call)
+                    self.build(message, call)
 
-                self.sentence_buttons(message, call)
                 return
 
             if call.data == 'previous_sent':
-                self.reverse = False
+                self.translating_sent = False
+
                 if self.sent_count > 0:
                     self.sent_count -= 1
-                    # self.sent = self.sents[self.count]
-                else:
-                    return
-
-                if self.building:
-                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
-                    bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
-                    self.sents_to_words(message, call, sents=None)
-
-                self.sentence_buttons(message, call)
+                    self.build_for_sents(message, call)
+                
                 return
 
             if call.data == 'next_sent':
-                self.reverse = False
+                self.translating_sent = False
+
                 if self.sent_count < len(self.sents)-1:
                     self.sent_count += 1
-                    # self.sent = self.sents[self.count]
-                else:
-                    return
-
-                if self.building:
-                    bot.delete_message(chat_id=chat_id, message_id=self.question_window)
-                    bot.delete_message(chat_id=chat_id, message_id=self.trans_window)
-                    self.sents_to_words(message, call, sents=None)
-
-                self.sentence_buttons(message, call)
+                    self.build_for_sents(message, call)
+                
                 return
 
             if call.data =='all_text':
@@ -271,16 +223,7 @@ class Text(State):
                 return
 
             if call.data == 'build':
-                self.sent_count = 0
-                # self.sent = self.sents[self.count]
-
-                self.building = True
-                self.input_sentences = False
-                self.new_sentence = True
-                # self.question_window = message_id
-                # self.trans_window = message_id
-                self.text_to_sents(message, call)
-                self.sentence_buttons(message, call)
+                self.build(message, call)
 
             if call.data == 'end':
                 self.reverse = False
@@ -348,46 +291,37 @@ class Text(State):
                 self.sentence_buttons(message, call)
                 self.buttons(message, call)
 
-            # if call.data == 'voice':
-            #     user_name = call.from_user.first_name
-            #     folder_name = user_name + '(' + str(chat_id) + ')'
-            #     tts = gTTS(self.text)
-            #     audio = 'my.mp3'#self.text+'.mp3'
-            #     tts.save(folder_name+'\\'+audio)
-            #     bot.send_audio(chat_id=chat_id, audio=open(folder_name+'\\'+audio, 'rb'))
-
             if call.data == 'previus_plus':
                 if not self.free_input:
-                    if self.current_ids[0] == 0:
-                        pass
-                    else:
-                        self.current_ids[:0] = [self.current_ids[0]-1]
-                        self.printing(message, call)
+                    if self.slicer[0] > 0:
+                        self.slicer[0] -= 1
+
+                        self.word_window.text = self.print_words(message, call)
+                        self.word_window.edit(user_id=user_id)
 
             if call.data == 'next_plus':
                 if not self.free_input:
-                    if self.current_ids[-1] == len(self.words)-1:
-                        pass
-                    else:
-                        self.current_ids.append(self.current_ids[-1] + 1)
-                        self.printing(message, call)
+                    if self.slicer[1] < len(self.words):
+                        self.slicer[1] += 1
+
+                        self.word_window.text = self.print_words(message, call)
+                        self.word_window.edit(user_id=user_id)
 
             if call.data == 'previus_minus':
                 if not self.free_input:
-                    if len(self.current_ids) == 1:
-                        pass
-                    else:
-                        self.current_ids.pop(0)
-                        self.printing(message, call)
+                    if self.slicer[0] < self.slicer[1] -1:
+                        self.slicer[0] += 1
+
+                        self.word_window.text = self.print_words(message, call)
+                        self.word_window.edit(user_id=user_id)
 
             if call.data == 'next_minus':
                 if not self.free_input:
-                    if len(self.current_ids) == 1:
-                        pass
-                    else:
-                        self.current_ids.pop()
-                        self.printing(message, call)
+                    if self.slicer[1] > self.slicer[0] +1:
+                        self.slicer[1] -= 1
 
+                        self.word_window.text = self.print_words(message, call)
+                        self.word_window.edit(user_id=user_id)
 
             if call.data == 'plus':
                 self.slicer +=1
@@ -432,511 +366,274 @@ class Text(State):
                 translated = GoogleTranslator(source=self.lang, target='ru').translate(self.word_to_write)
                 bot.edit_message_text(chat_id=call.message.chat.id, message_id=self.trans_window, text='<b>'+self.word_to_write+'</b>' + '\nозначает:\n' + translated, reply_markup=markup, parse_mode='html')
 
-            # if call.data == 'okey':
+    def translate(self, text):
+        translated_text = GoogleTranslator(source='auto', target='ru').translate(text)
 
-            #     bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажми на <b>'перевод'</b>, чтобы перевести предложение\nНажми на <b>'следующее'</b> чтобы перейти к следующему предложению\n\nИспользуй"+emoji.emojize(':heavy_plus_sign:')+"чтобы добавить следующее слово\n\Используй"+emoji.emojize(':heavy_minus_sign:')+"чтобы убрать добавленное слово\n\nТы можешь записать сколько угодно слов с предложения, <b>только не записывай одинаковые!</b>", parse_mode='html')
+        return translated_text
 
-            #     markup = types.InlineKeyboardMarkup(row_width=2)
-            #     item = types.InlineKeyboardButton('погнали!', callback_data='go')
-            #     markup.add(item)
+    def print_words(self, message=None, call=None):
 
-            #     bot.send_message(call.from_user.id,
-            #     "Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", reply_markup=markup, parse_mode='html')
+        self.visual_words = self.words[self.slicer[0]:self.slicer[1]]
+        self.visual_words = ' '.join(self.visual_words)
+        self.translated_word = self.translate(self.visual_words)
 
-            # if call.data == 'go':
-            #     bot.edit_message_text(chat_id=call.from_user.id, message_id=call.message.message_id, text="Нажав на кнопку <b>'записать'</b>, позже ты сможешь поучить это слово\n<b>Запиши хотя бы одно слово из предложения!!</b>\nИначе я сломаюсь:)", parse_mode='html')
+        return f'{self.visual_words}\nОзначает:\n{self.translated_word}'
 
-            #     self.sent_to_words(message, call)
-
-    def sentence_buttons(self, message=None, call=None, state=None):
-        if call:
-            chat_id = call.from_user.id
-        if message:
-            chat_id = message.chat.id
-
-        markup = types.InlineKeyboardMarkup(row_width=3)
-        prev = types.InlineKeyboardButton('предыдущий', callback_data='previous')
-        trans = types.InlineKeyboardButton('перевод', callback_data='translate')
-        next = types.InlineKeyboardButton('следующий', callback_data='next')
-        build = types.InlineKeyboardButton('разобрать', callback_data='build')
-        # voice = types.InlineKeyboardButton('озвучить', callback_data='voice')
-        delete = types.InlineKeyboardButton('удалить', callback_data='delete')
-
-        if self.building:
-
-            button = 'закончить'
-            callback = 'end'
-            build = types.InlineKeyboardButton(button, callback_data=callback)
-            reverse = types.InlineKeyboardButton('поменять язык', callback_data='reverse')
-
-            if self.all_text:
-                text = self.text
-                button = 'cвернуть'
-                callback = 'roll_up'
-            else:
-                text = self.sent
-                button = 'весь текст'
-                callback = 'all_text'
-
-            # if len(self.sents) > 1:
-            prev_s = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='previous_sent')
-            sents = types.InlineKeyboardButton(button, callback_data=callback)
-            next_s = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='next_sent')
-                # if self.all_text:
-                #     markup.add(sents)
-
-        else:
-            text = self.text
-
-        if call:
-            if call.data == 'translate':
-
-                def has_cyrillic(text):
-                    return bool(re.search('[а-яА-Я]', text))
-
-                if has_cyrillic(text):
-                    target = self.lang
-                else:
-                    target = 'ru'
-
-                self.translated_sent = GoogleTranslator(source='auto', target=target).translate(text)
-                text = self.translated_sent
-                button = 'оригинал'
-                callback = 'original'
-                trans = types.InlineKeyboardButton(button, callback_data=callback)
-
-            if call.data == 'original':
-                # text = self.text
-                button = 'перевод'
-                callback = 'translate'
-                trans = types.InlineKeyboardButton(button, callback_data=callback)
-
-        if self.building:
-            if self.all_text:
-                # items = [types.KeyboardButton(item) for item in self.sents]
-                # markup.add(*items)
-                if len(self.sents) > 1:
-                    markup.row(sents)
-                markup.add(prev, trans, next, reverse, build)
-            else:
-                if len(self.sents) > 1:
-                # markup.row(prev_s, sents, next_s)
-                    markup.add(prev_s, sents, next_s, prev, trans, next, reverse, build)
-                else:
-                    markup.add(prev, trans, next, reverse, build)
-        else:
-            markup.add(prev, trans, next, build, delete)# voice)
-        # if not self.all_text:
-        #     markup.row(prev_s, sents,item4, item5, item6,)
-        # else:
-        #     try:
-        #         markup.add(prev_s, sents, next_s, prev, trans, next, build, delete)
-        #     except UnboundLocalError:
-        #         markup.add(prev, trans, next, build, delete)
-            # raise
-        self.visual_text = text
-        bot.edit_message_text(text=text, chat_id=chat_id, message_id=self.text_window,reply_markup=markup, parse_mode='html')
-
-    def printing(self, message=None, call=None):
-
-        current_words = []
-        self.word = None
-        for x in self.current_ids:
-            current_words.append(self.words[x])
-        self.word = ' '.join(current_words)
-
-        self.menu(message, call)
-
-    def menu(self, message=None, call=None): #chat_id=None):
-        if message:
-            user_name = message.from_user.first_name
-            chat_id = message.chat.id
-        if call:
-            user_name = call.from_user.first_name
-            chat_id = call.from_user.id
-
-        markup = types.InlineKeyboardMarkup(row_width=3)
-        item1 = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='previus_plus')
-        item3 = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='next_plus')
-        item2 = types.InlineKeyboardButton('добавить', callback_data='adding')
-        item4 = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='previus_minus')
-        item6 = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='next_minus')
-        item5 = types.InlineKeyboardButton('изменить', callback_data='change')
-        item7 = types.InlineKeyboardButton('записать', callback_data='write')
-
-        markup.add(item1,item2,item3,item4,item5,item6,item7)
-
-        sign = ''
-
-        db, sql = self.data_base(message, call)
-
-        sql.execute("SELECT translate FROM english WHERE word = ?", (self.word,))
-        self.exist_word = sql.fetchall()
-
-        if self.exist_word or self.changing or self.adding:
-
-            if self.exist_word:
-                x = [x for x in self.exist_word[0]]
-                self.translated_word = ', '.join(x)
-                sign = 'Это слово уже есть!\n'
-
-            if self.changing:
-                if self.new_translate:
-                    self.translated_word = self.temp_word
-                else:
-                    sign = '<b>Кинь свой перевод!</b>\n'
-
-            if self.adding:
-                if self.new_translate:
-                    self.translated_word = self.translated_word + ', ' + self.temp_word
-                else:
-                    sign = '<b>Добавь перевод!</b>\n'
-        else:
-            def has_cyrillic(text):
-                return bool(re.search('[а-яА-Я]', text))
-
-            if has_cyrillic(self.word):
-                target = self.lang
-            else:
-                target = 'ru'
-
-            self.translated_word = GoogleTranslator(source='auto', target=target).translate(self.word)
-
-        text = sign+'<b>'+self.word+'</b>' + '\nозначает:\n' + '<b>'+self.translated_word+'</b>'
-
-        bot.edit_message_text(chat_id=chat_id, message_id=self.trans_window, text=text, reply_markup=markup, parse_mode='html')
-
-    def vars(self, message=None, call=None, sents=None, count=None, lang=None):
+    def menu(self, message=None, call=None):
         pass
+    
+    def sent_to_words(self, sent):
+        words = re.findall(r"[\w']+", sent)
+        return words
 
-    def sents_to_words(self, message=None, call=None, sents=None):
-
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call:
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
-
-        # folder_name = user_name + '(' + str(user_id) + ')'
-
-        # if sents:
-        #     self.sents = sents
-        #     if call:
-        #         if call.data == 'continue':
-        #             with open(folder_name+'\\count.txt', 'r') as c:
-        #                 count = c.readlines()
-        #                 self.count = int(count[0])
-        #     if message:
-        #         if message.text == 'new_text':
-        #             message.text = ''
-        #             self.count = 0
-
-        # print(self.count, len(self.sents))
-
-        # if self.count >= len(self.sents):
-        #     self.count = 0
-        #     bot.edit_message_text(chat_id=user_id, message_id=self.trans_window, text='Это всё!')
-
-        #     # bot.end_message(user_id,'Это всё!')
-
-        #     with open(folder_name+'\\count.txt', 'w') as c:
-        #         c.write(str(self.count))
-        #     return
-
-        # if self.count < 0:
-        # self.count = 0
-
-        #     return
-        if sents:
-            self.sents = sents
-        self.sent = self.sents[self.sent_count]
-        # # self.sent = message.text
-        # self.words = re.findall(r"[\w']+", self.sent)
-
-        # with open(folder_name+'\\count.txt', 'w') as c:
-        #     c.write(str(self.count))
-
-        self.buttons(message, call)
-
-    def buttons(self, message=None, call=None):
-
-        self.words = re.findall(r"[\w']+", self.sent)
-
+    def words_buttons(self):
         markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
         items = [types.KeyboardButton(item) for item in self.words]
         markup.add(*items)
 
-        if call:
+        return markup
 
-            user_id = call.message.chat.id
-            message_id = call.message.message_id
-            user_name = call.from_user.first_name
+    def save_word(self, user_id):
+        self.text_id = self.text_objects_list[self.text_count]['text_id']
+        print(type(self.text_id))
+        form = {
+            'word' : self.visual_words,
+            'translation' : self.translated_word.split('*'),
+            'text_id' : self.text_id,
+            'sent_id' : self.sent_count
+        }
 
-            self.question_window = self.last_message_id+1
-            self.trans_window = self.last_message_id+2
-            self.last_message_id = self.trans_window
+        result = self.mongo_db.add_new_word(user_id=user_id, language=self.language, form=form)
 
-            bot.send_message(user_id, 'Какое слово тебе не знакомо?', reply_markup=markup)
-            bot.send_message(user_id, 'Выбери слово')
-            write(user_name, user_id, message_id=self.last_message_id, target='last message')
-
-
-            return
-
-    def name_id(self, message=None, call=None):
-        if message:
-            user_name = message.from_user.first_name
-            user_id = message.chat.id
-        if call:
-            user_name = call.from_user.first_name
-            user_id = call.from_user.id
-
-        return user_name, user_id
-
-    def write_word(self, message=None, call=None):
-        # if message:
-        #     user_name = message.from_user.first_name
-        #     user_id = message.chat.id
-        # if call:
-        #     user_name = call.from_user.first_name
-        #     user_id = call.from_user.id
-
-        user_name, user_id = self.name_id(message, call)
-
-        db, sql = self.data_base(message, call)
-
-        if self.exist_word:
-            sql.execute(f"UPDATE english SET translate = '{self.translated_word}' WHERE word = '{self.word}'")
-            db.commit()
+        if result:
+            return True
         else:
-            if self.free_input:
-                sql.execute("INSERT INTO english VALUES (?, ?, ?, ?)", (self.word, self.translated_word, None, 0))
-                db.commit()
-            else:
-                sql.execute("INSERT INTO english VALUES (?, ?, ?, ?)", (self.word, self.translated_word, self.sent, 0))
-                db.commit()
+            return False
 
-        # for value in sql.execute("SELECT * FROM english"):
-        #     print(value)
+    def instructions(self, userData, message=None, call=None):
+        userData = self.get_userData(message, call)
+        user_text = message.text
+        self.user_text = user_text
 
-        bot.edit_message_text(chat_id=user_id, message_id=self.trans_window, text='Записано!\n' + '<b>'+self.word+'</b>' + ':\n' + '<b>'+self.translated_word+'</b>', parse_mode='html')
+        self.last_message_id = userData['message_id']
+        self.mongo_db.update_last_message_id(user_id=userData['user_id'], message_id=self.last_message_id)
 
-    def instructions(self, message=None, call=None):
+        bot.delete_message(chat_id=userData['user_id'], message_id=userData['message_id'])
 
-        user_name = message.from_user.first_name
-        message_id = message.message_id
-        user_id = message.chat.id
-        self.last_message_id = message_id
-        write(user_name, user_id, message_id=self.last_message_id, target='last message')
+        if self.building:
+            if user_text in self.words:
+                self.free_input = False
+                
+                self.word_id = self.words.index(user_text)
+                self.slicer = [self.word_id, self.word_id+1]
+                self.word_window.text = self.print_words(message, call)
+                self.word_window.edit(userData['user_id'])
 
-        db, sql = self.data_base(message, call)
+            else: 
+                if self.changing_word:
+                    self.translated_word = user_text
+                    self.word_window.text = f'{self.visual_words}\nОзначает:\n{user_text}'
+                    self.word_window.edit(userData['user_id'])
+                    self.changing_word = False
 
-        if self.changing_lang:
-            self.messages_while_changing += 1
+                elif self.adding_word:
+                    self.translated_word = f'{self.translated_word}*{user_text}'
+                    self.word_window.text = f'{self.visual_words}\nОзначает:\n{self.translated_word}, {user_text}'
+                    self.word_window.edit(userData['user_id'])
+                    self.adding_word = False
+                    
+                else:
+                    self.free_input = True
+                    self.visual_words = user_text
+                    self.translated_word = self.translate(user_text)
+                    self.word_window.text = f'{user_text}\nОзначает:\n{self.translated_word}'
+                    self.word_window.markup = self.word_window_buttons()
+                    self.word_window.edit(userData['user_id'])
 
-            if message.text in self.langs:
-                self.lang = self.langs[message.text]
-                self.changing_lang = False
-
-                for m in range(self.messages_while_changing):
-                    bot.delete_message(chat_id=user_id, message_id=message_id-m)
-                self.messages_while_changing = 0
-            return
-
-        if self.input_sentences:
-            self.text = message.text
-            self.all_texts.append(self.text)
-            # self.sents = self.text_to_sents(message)
-            sql.execute("INSERT INTO texts VALUES (?, ?)", (message_id, self.text))
-            db.commit()
-            bot.delete_message(chat_id=user_id, message_id=message_id)
-
-            self.sentence_buttons(message)
-            return
-
-        if self.new_sentence:
-            self.new_sentence = False
-
-        if self.adding_input:
-            self.temp_word = message.text
-            self.new_translate = True
-            bot.delete_message(chat_id=user_id, message_id=message_id)
-            self.menu(message, call)
-
-            self.new_translate = False
-            self.adding = False
-            self.changing = False
-            self.adding_input = False
-
-            return
-
-        self.word = message.text
-
-        try:
-            index_word = self.words.index(self.word)
-            self.current_ids = [index_word]
-            self.free_input = False
-        except ValueError:
-            self.free_input = True
-
-        # if self.question_window:
-        #     # bot.delete_message(chat_id=user_id, message_id=self.question_window)
-        #     # self.question_window = None
-
-        bot.delete_message(chat_id=user_id, message_id=message_id)
-
-        self.menu(message, call)#chat_id)
-
-    def vars(self, message=None, call=None):
+    def get_userData(self, message=None, call=None):
         if message:
             user_name = message.from_user.first_name
             user_id = message.chat.id
             message_id = message.message_id
         if call:
             user_name = call.from_user.first_name
-            user_id = call.message.chat.id
+            user_id = call.from_user.id
             message_id = call.message.message_id
-        return user_name, user_id, message_id
+
+        return {'user_name' : user_name, 
+                'user_id' : user_id, 
+                'message_id': message_id}
+    
+    def detect_language(self, text):
+        language = single_detection(text, api_key=self.lang_detect_token)
+        return language
+    
+    def get_language_fullname(self, language_code):
+        try:
+            language_info = languages.get(part1=language_code)
+            return language_info.name
+        except KeyError:
+            return 'Unknown'
+
+    def save_text(self, user_id, textData):
+        lang = single_detection(text=textData.get('text'), api_key=self.lang_detect_token)
+        language = self.get_language_fullname(lang)
+        result = self.mongo_db.add_new_text(user_id, language, textData)
+        
+        if result:
+            return True, language
+        else:
+            return False
+        
+    def text_window_buttons(self):
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        prev = types.InlineKeyboardButton(emoji.emojize(':last_track_button:', use_aliases=True), callback_data='previous_text')
+        next = types.InlineKeyboardButton(emoji.emojize(':next_track_button:', use_aliases=True), callback_data='next_text')
+        delete = types.InlineKeyboardButton('удалить', callback_data='delete')     
+
+        if self.translating_text:
+            trans = types.InlineKeyboardButton('оригинал', callback_data='original_text')
+        else:
+            trans = types.InlineKeyboardButton('перевод', callback_data='translate_text')
+
+        if self.building:
+            build = types.InlineKeyboardButton('закончить', callback_data='end') 
+        else: 
+            build = types.InlineKeyboardButton('разобрать', callback_data='build')
+
+        markup.add(prev, trans, next, delete, build)
+
+        return markup
+    
+    def sentence_window_buttons(self):
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        prev = types.InlineKeyboardButton(emoji.emojize(':fast_reverse_button:', use_aliases=True), callback_data='previous_sent')
+        
+        if self.translating_sent:
+            trans = types.InlineKeyboardButton('оригинал', callback_data='original_sent')
+        else:
+            trans = types.InlineKeyboardButton('перевод', callback_data='translate_sent')
+
+        next = types.InlineKeyboardButton(emoji.emojize(':fast-forward_button:', use_aliases=True), callback_data='next_sent')
+
+        markup.add(prev, trans, next)
+
+        return markup
+
+    def word_window_buttons(self):
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        item1 = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='previus_plus')
+        item3 = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='next_plus')
+        item2 = types.InlineKeyboardButton('добавить', callback_data='add_translate')
+        item4 = types.InlineKeyboardButton(emoji.emojize(':play_button:', use_aliases=True), callback_data='previus_minus')
+        item6 = types.InlineKeyboardButton(emoji.emojize(':reverse_button:', use_aliases=True), callback_data='next_minus')
+        item5 = types.InlineKeyboardButton('изменить', callback_data='change_translate')
+        item7 = types.InlineKeyboardButton('записать', callback_data='save_word')
+
+        markup.add(item1,item2,item3,item4,item5,item6,item7)
+
+        return markup
+
+    def send_text_window(self, userData, language):
+        self.text_count = 0
+        self.last_message_id = userData['message_id']
+        self.last_message_id += 1
+        self.language = language
+
+        self.text_objects_list =  self.mongo_db.get_all_texts(user_id=userData['user_id'], language=language)
+        self.all_texts = [text_object['text'] for text_object in self.text_objects_list]
+        self.text = self.all_texts[0]
+        self.visual_text = self.text
+
+        self.text_window = Window(id=self.last_message_id)
+        self.text_window.text = self.visual_text
+        self.text_window.markup = self.text_window_buttons()
+        self.text_window.send(user_id=userData['user_id'])
+
+    def build_for_sents(self, message, call):
+        userData = self.get_userData(message, call)
+
+        self.word_id = 0
+        self.slicer = [0, 1]
+
+        self.sent = self.sents[self.sent_count]
+        self.words = self.sent_to_words(self.sent)
+        self.word = self.words[self.word_id]
+
+        self.sentence_window.text = self.sent
+        self.word_window.text = self.print_words(message, call)
+        
+        self.sentence_window.markup = self.sentence_window_buttons()
+        self.choose_word_window.markup = self.words_buttons()
+
+        self.sentence_window.edit(user_id=userData['user_id'])
+        self.word_window.edit(user_id=userData['user_id'])
+
+        self.choose_word_window.delete(user_id=userData['user_id'])
+        self.choose_word_window.send(user_id=userData['user_id'])
+        self.choose_word_window.id = self.last_message_id+1
+
+        self.last_message_id = self.choose_word_window.id
+        self.mongo_db.update_last_message_id(user_id=userData['user_id'], message_id=self.last_message_id)
+
+    def build(self, message, call):
+        userData = self.get_userData(message, call)
+
+        self.sent_count = 0
+        self.word_id = 0
+        self.slicer = [0, 1]
+
+        if not self.building:
+            self.sentence_window = Window(id=self.last_message_id+1)
+            self.word_window = Window(id=self.last_message_id+2)
+            self.choose_word_window = Window(id=self.last_message_id+3)
+        
+        self.sents = self.text_to_sents(self.text)
+        self.sent = self.sents[self.sent_count]
+
+        self.words = self.sent_to_words(self.sent)
+        self.word = self.words[self.word_id]
+        
+        self.sentence_window.text = self.sent
+        self.word_window.text = self.print_words(message, call)
+        self.choose_word_window.text = 'Выбери слово'
+
+        self.sentence_window.markup = self.sentence_window_buttons()
+        self.word_window.markup = self.word_window_buttons()
+        self.choose_word_window.markup = self.words_buttons()
+
+        if not self.building:
+            self.building = True
+
+            self.text_window.markup = self.text_window_buttons()
+            self.text_window.edit(user_id=userData['user_id'])
+
+            self.sentence_window.send(user_id=userData['user_id'])
+            self.word_window.send(user_id=userData['user_id'])
+            self.choose_word_window.send(user_id=userData['user_id'])
+        else:
+            self.sentence_window.edit(user_id=userData['user_id'])
+            self.word_window.edit(user_id=userData['user_id'])
+
+            self.choose_word_window.delete(user_id=userData['user_id'])
+            self.choose_word_window.send(user_id=userData['user_id'])
+            self.choose_word_window.id = self.last_message_id+1
+
+        self.last_message_id = self.choose_word_window.id
+        self.mongo_db.update_last_message_id(user_id=userData['user_id'], message_id=self.last_message_id)
+
+    def work_with_text(self, user_id, language, text_id, message=None, call=None):
+        self.text = self.mongo_db.get_text_by_text_id(user_id=user_id, text_id=text_id, language=language)
+        self.last_message_id = self.mongo_db.get_last_message_id(user_id=user_id)
+        self.build(message, call)
+        return
 
     def hello(self, message=None, call=None, data=None, reason=None, last_message=None, wiki_page=None):
-        user_name, user_id, message_id = self.vars(message,call)
-        db, sql = self.data_base(message, call)
-
-        self.text_count = 0
-        self.sent_count = 0
-        self.input_sentences = True
-        self.building = False
-        self.new_sentence = False
-
-        if not reason:
-            self.last_message_id = message_id
-            sql.execute("SELECT text FROM texts")
-            try:
-                self.all_texts = [text[0] for text in sql.fetchall()]
-                self.text = self.all_texts[0]
-            except IndexError :
-                pass
-
-        if reason == 'wiki':
-            self.wiki = True
-            self.wiki_page = wiki_page
-            self.all_texts = []
-            sql.execute("SELECT sentence FROM wiki WHERE title = ?",(wiki_page,))
-            index = sql.fetchall()[0][0]
-            if index == None:
-                sql.execute(f"UPDATE wiki SET sentence='{0}' WHERE title='{wiki_page}'")
-                db.commit()
-            else:
-                # if index > len 
-                self.text_count = index
-            # заполнить пуcтые ячейки в sentences
-            # self.titles = titles
-            self.last_message_id = last_message
-            symbols = 500
-
-            for title in data:
-                text = data[title]
-                l = len(data[title])
-                parts = int(len(text)/symbols) +1
-                part_index = 0
-                part = 0
-                
-                def to_last_point(part_index):
-                    end = slice.rindex('.')
-                    part_index += end+1
-                    final_text = slice[0:end+1]
-                    return part_index, final_text
-
-                while not part == parts:
-                    part += 1
-                    if parts > 1:
-                        section = data[title][part_index:]
-                        slice = section[0:symbols]
-
-                        if '.' not in slice:
-                            while '.' not in slice:
-                                if len(slice)+symbols < 4000:
-                                    slice = section[0:len(slice)+symbols]
-                                    part += 1
-                                    if '.' in slice:
-                                        part_index, final_text = to_last_point(part_index)
-                                        break
-
-                                if len(slice) >= len(section):
-                                    if '.' not in slice:
-                                        final_text = slice
-                                    else:
-                                        part_index, final_text = to_last_point(part_index)
-                                    break   
-                        else: 
-                            part_index, final_text = to_last_point(part_index)
-
-                    htmltitle = '<b>'+title+'</b>'
-                    all_text = htmltitle +'\n'+ final_text
-                    self.all_texts.append(all_text) 
-            
-            if self.text_count > len(self.all_texts)-1:
-                self.text_count = 0
-                sql.execute(f"UPDATE wiki SET sentence='{0}' WHERE title='{self.wiki_page}'")
-                db.commit()
-
-            self.text = self.all_texts[self.text_count]
-
-        bot.send_message(user_id, 'Получаю сообщения!')
-        self.last_message_id += 1
-        self.text_window = self.last_message_id
-        write(user_name, user_id, message_id=self.last_message_id, target='last message')
-
-        if self.text:
-            self.sentence_buttons(message, call)
+        pass
 
     def random_words(self, message):
         pass
 
-    def text_to_sents(self, message, call):
-
-        alphabets= "([A-Za-z])"
-        prefixes = "(Mr|St|Mrs|Ms|Dr)[.]"
-        suffixes = "(Inc|Ltd|Jr|Sr|Co)"
-        starters = "(Mr|Mrs|Ms|Dr|He\s|She\s|It\s|They\s|Their\s|Our\s|We\s|But\s|However\s|That\s|This\s|Wherever)"
-        acronyms = "([A-Z][.][A-Z][.](?:[A-Z][.])?)"
-        websites = "[.](com|net|org|io|gov)"
-
-        def split_into_sentences(text):
-
-            text = " " + text + "  "
-            # text = text.replace('-\n', '')
-            # text = text.replace("\n"," ")
-            text = re.sub(prefixes,"\\1<prd>",text)
-            text = re.sub(websites,"<prd>\\1",text)
-            if "Ph.D" in text: text = text.replace("Ph.D.","Ph<prd>D<prd>")
-            text = re.sub("\s" + alphabets + "[.] "," \\1<prd> ",text)
-            text = re.sub(acronyms+" "+starters,"\\1<stop> \\2",text)
-            text = re.sub(alphabets + "[.]" + alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>\\3<prd>",text)
-            text = re.sub(alphabets + "[.]" + alphabets + "[.]","\\1<prd>\\2<prd>",text)
-            text = re.sub(" "+suffixes+"[.] "+starters," \\1<stop> \\2",text)
-            text = re.sub(" "+suffixes+"[.]"," \\1<prd>",text)
-            text = re.sub(" " + alphabets + "[.]"," \\1<prd>",text)
-            if "”" in text: text = text.replace(".”","”.")
-            if "\"" in text: text = text.replace(".\"","\".")
-            if "!" in text: text = text.replace("!\"","\"!")
-            if "?" in text: text = text.replace("?\"","\"?")
-            text = text.replace(".",".<stop>")
-            text = text.replace("?","?<stop>")
-            text = text.replace("!","!<stop>")
-            text = text.replace("<prd>",".")
-            sentences = text.split("<stop>")
-            if len(sentences) > 1:
-                sentences = sentences[:-1]
-            sentences = [s.strip() for s in sentences]
-            # print(sentences)
-            return sentences
-
-        if call.data == 'build':
-            text = call.message.text
-
-        sents = split_into_sentences(self.text)
-        # return sents
-        # print(call.message.message_id)
-        self.sents_to_words(message, call, sents)
+    def text_to_sents(self, text):
+        sentences = re.split(r'(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?|\!)\s', text)
+        return sentences

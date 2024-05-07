@@ -1,9 +1,10 @@
 from __future__ import annotations
 from telebot import types
 import traceback
-import yaml
+# import yamlext 
 import context
 import default
+import text
 import os
 import time
 import threading
@@ -13,118 +14,133 @@ import database
 from path import directory
 from users import write
 import datetime
-
-from flask_sslify import SSLify
-from flask import Flask, request
-import nltk
-
-nltk.download('punkt')
+import mongodb_database
+from learn import Learn
 
 NAME_ID = {}
 
 MY_ID = 183278535
 
-file_name = 'users.yaml'
+TARGET_CHANNEL_ID = -1002015277757
 
-file_exists = os.path.exists(directory(file_name))
+MONGO_DB = mongodb_database.MongoDataBase()
 
-if not file_exists:
-    with open(directory(file_name), 'w', encoding='utf-8') as f:
-        data = {
-            'users':{}
-        }
-        yaml.safe_dump(data, f)
+global FIRST_MESSAGE
+FIRST_MESSAGE = False
 
-with open(directory(file_name), 'r', encoding='utf-8') as f:
-    try:
-        result = yaml.load(f, Loader=yaml.FullLoader)['users']
-    except TypeError:
-        raise
-
-if result:
-    for id, data in result.items():
-        name = result[id]['name']
-        NAME_ID[id] = name
-
-@bot.message_handler(commands=['wiki'])
-def language(message):
+@bot.channel_post_handler(func=lambda message: message.chat.id == TARGET_CHANNEL_ID)
+def channel_handler(message):
     # return
-    try:
-        user_name, user_id = get_name_id(message)
+    # Выводим информацию о сообщении из канала
+    print(f"Получено сообщение из канала {message.chat.title} ({message.chat.id}):")
+    print(f"Текст: {message.text}")
+    
+    textData = {
+        'text' : message.text
+    }
 
-        context.transition_to(default.Default())
-        context.instructions(message)
+    context.transition_to(text.Text())
+    result, language = context.save_text(user_id=MY_ID, textData=textData)
 
-    except Exception as e:
-        send_error(e)
+    if result:
+        markup = types.InlineKeyboardMarkup(row_width=3)
+        item1 = types.InlineKeyboardButton('Разобрать', callback_data=f'work*{language}*{str(message.message_id)}')
+        item2 = types.InlineKeyboardButton('Удалить', callback_data=f'delete*{language}*{str(message.message_id)}')
 
-@bot.message_handler(commands=['lang'])
-def lang(message):
-    try:
-        context.language(message, None)
+        markup.add(item1,item2)
+        bot.send_message(MY_ID, f'Записал текст!\n{message.text}', reply_markup=markup)
 
-    except Exception as e:
-        send_error(e)
+    else:
+        bot.send_message(MY_ID, 'There was an error while saving the text')
+
+    last_message_id = MONGO_DB.get_last_message_id(user_id=MY_ID)
+    MONGO_DB.update_last_message_id(user_id=MY_ID, message_id=last_message_id+1)
+
+    return
+
+@bot.message_handler(commands=['practice'])
+def language(message):
+    context.transition_to(learn.Learn())
+    context.hello(message=message)
+
+@bot.message_handler(commands=['texts'])
+def command_texts(message):
+    userData = get_user_data(message)
+    global FIRST_MESSAGE
+    FIRST_MESSAGE = True
+
+    if user_exists(userData):
+        context.transition_to(text.Text())
+        context.send_text_window(userData=userData, language='English')
+    else:
+        bot.send_message(userData['user_id'], 'Press /start to register')
 
 @bot.message_handler(commands=['start'])
 def welcome(message):
+    userData = get_user_data(message)
+    global FIRST_MESSAGE
+    FIRST_MESSAGE = True
 
-    try:
-        user_name, user_id, message_id = get_name_id(message, get='message_id')
+    if user_exists(userData):
+        bot.send_message(userData['user_id'], 'Welcome back!')
+    else:
+        MONGO_DB.add_new_user(userData)
+        bot.send_message(userData['user_id'], 'Welcome! You are registered!')
 
-        if user_id not in NAME_ID.keys():
-            new_user(user_id, user_name)
-
-        if user_id != 183278535:
-            text = f"""<b>{user_name} ({user_id})</b>\n{message.text}"""
-            bot.send_message(183278535, text, parse_mode='html')
-
-        items = ['Тестики', 'Загрузить текст']
-
-        if context._state.__module__ == 'text':
-            context.reset()
-        context.transition_to(default.Default())
-
-        markup = types.ReplyKeyboardMarkup(resize_keyboard=True)
-        items = [types.KeyboardButton(item) for item in items]
-        markup.add(*items)
-        write(user_name, user_id, message_id=message_id+1, target='last message')
-        bot.send_message(user_id, 'Что будем делать?', reply_markup=markup)
-
-    except Exception as e:
-        send_error(e)
+    MONGO_DB.update_last_message_id(user_id=userData['user_id'], message_id=userData['message_id']+1)
+    return
 
 @bot.message_handler(content_types=['text'])
 def lalala(message):
     # return
     try:
-        user_name, user_id, message_id = get_name_id(message, get='message_id')
+        userData = get_user_data(message=message)
 
-        if user_id not in NAME_ID.keys():
-            bot.send_message(user_id, 'напиши /start !')
-        else:
-            if user_id != 183278535:
-                text = f"""<b>{user_name} ({user_id})</b>\n{message.text}"""
-                bot.send_message(183278535, text, parse_mode='html')
-            write(user_name, user_id, message_id=message_id, target='last message')
-
-            context.instructions(message)
+        context.instructions(userData=userData, message=message)
 
     except Exception as e:
         send_error(e)
 
 @bot.callback_query_handler(func=lambda call: True)
-def callback_inline(call):
-    # return
-    user_name, user_id = get_name_id(call=call)
+def callback_inline(call): 
+    if not FIRST_MESSAGE:
+        return
+    
+    userData = get_user_data(call=call)
+    context.inline_buttons(call=call)
+    return
 
     try:
-        context.inline_buttons(None,call)
+        action, language, text_id = call.data.split('*')
 
-    except Exception as e:
-        send_error(e)
+        if action == 'delete':
+            result = MONGO_DB.delete_text_by_text_id(language=language, collection_name=userData['user_id'], text_id=int(text_id))
+            bot.edit_message_text(text='Удалено!', chat_id=userData['user_id'], message_id=userData['message_id'])
+            return
+        
+        if action == 'work':
+            context.transition_to(text.Text())
+            context.work_with_text(user_id=userData['user_id'], language=language, text_id=text_id, call=call)
+            return
+        
+    except ValueError:
+        try:
+            if not context.current_state() == 'Text':
+                context.transition_to(text.Text())
 
-def get_name_id(message=None, call=None, get=None):
+            context.inline_buttons(call=call)
+        except Exception as e:
+            raise
+            # send_error(e)
+
+
+def user_exists(userData):
+    if MONGO_DB.is_user_collection_exists(user_id=userData['user_id']):
+        return True
+    else:
+        return False
+
+def get_user_data(message=None, call=None):
     if message:
         user_name = message.from_user.first_name
         user_id = message.chat.id
@@ -133,9 +149,10 @@ def get_name_id(message=None, call=None, get=None):
         user_name = call.from_user.first_name
         user_id = call.from_user.id
         message_id = call.message.message_id
-    if get == 'message_id':
-        return user_name, user_id, message_id
-    return user_name, user_id
+
+    return {'user_name' : user_name, 
+            'user_id' : user_id, 
+            'message_id': message_id}
 
 def send_error(e):
     tb = traceback.format_exc()
@@ -181,7 +198,7 @@ def new_user(user_id, user_name):
 if __name__ == "__main__":
     """Client code"""
 
-    context = context.Context(default.Default())
+    context = context.Context()
     bot.remove_webhook()
     bot.polling(none_stop=True)
 

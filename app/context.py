@@ -17,8 +17,9 @@ class Context:
     # def __str__ (self, state: State) -> None:
     #     return state.__name__
 
-    def __init__(self, state: State) -> None:
-        self.transition_to(state)
+    def __init__(self, initial_state: State = None) -> None:
+        if initial_state:
+            self.transition_to(initial_state)
 
     def transition_to(self, state: State):
         """
@@ -30,35 +31,50 @@ class Context:
         self._state.context = self
 
     def set_default_state(self):
-        self._state = Default()
+        self._state = Default() 
+
+    def current_state(self):
+        """
+        Возвращает имя текущего состояния или None, если состояние не установлено.
+        """
+        if self._state:
+            return type(self._state).__name__
+        else:
+            return None
 
     """
     Контекст делегирует часть своего поведения текущему объекту Состояния.
     """
 
-    def language(self, message, call):
-        self._state.language(message,call)
+    def build_for_sents(self, *args, **kwargs):
+        self._state.build_for_sents(*args, **kwargs)
 
-    def data_base(self, message, call):
-        self._state.data_base(message,call)
+    def send_text_window(self, *args, **kwargs):
+        self._state.send_text_window(*args, **kwargs)
 
-    def reset(self):
-        self._state.reset()
+    def text_window_buttons(self, *args, **kwargs):
+        self._state.text_window_buttons(*args, **kwargs)
 
-    def inline_buttons(self, message, call):
+    def detect_language(self, *args, **kwargs):
+        self._state.detect_language(*args, **kwargs)
+
+    def get_language_fullname(self, *args, **kwargs):
+        self._state.get_language_fullname(*args, **kwargs)
+
+    def save_text(self, *args, **kwargs):
+        return self._state.save_text(*args, **kwargs)
+
+    def work_with_text(self, *args, **kwargs):
+        self._state.work_with_text(*args, **kwargs)
+
+    def inline_buttons(self, message=None, call=None):
         self._state.inline_buttons(message, call)
 
-    def printing(self, message, call):
-        self._state.printing(self, chat_id)
-    
-    def sentence_buttons(self, message, call):
-        self._state.sentence_buttons(self, message, call)
+    def print_words(self, *args, **kwargs):
+        self._state.printing(self, *args, **kwargs)
 
     def menu(self,message, call):
         self._state.menu(self,message, call)
-
-    def vars(self, message, call, sents, count, lang):
-        self._state.vars(message, call, sents, count, lang)
 
     def hello(self, *args, **kwargs):
         self._state.hello(*args, **kwargs)
@@ -66,17 +82,17 @@ class Context:
     def text_to_sents(self, message, call):
         self._state.text_to_sents(message, call)
 
-    def sents_to_words(self, message, call, sents):
-        self._state.sents_to_words(message, call, sents)
+    def sent_to_words(self, *args, **kwargs):
+        self._state.sent_to_words(*args, **kwargs)
     
-    def write_word(self, message):
+    def save_word(self, message):
         self._state.write_word(message)
 
     def random_words(self, message, call):
         self._state.random_words(message)
 
-    def buttons(self, message):
+    def words_buttons(self, message):
         self._state.buttons(message)
 
-    def instructions(self, message):
-        self._state.instructions(message)
+    def instructions(self, *args, **kwargs):
+        self._state.instructions(*args, **kwargs)

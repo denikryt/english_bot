@@ -17,36 +17,25 @@ class State(ABC):
     def context(self, context: Context) -> None:
         self._context = context
 
+
     @abstractmethod
-    def language(self, message=None, call=None):
+    def build_for_sents(self, *args, **kwargs) -> None:
         pass
 
     @abstractmethod
-    def data_base(self, message, call):
+    def work_with_text(self, *args, **kwargs) -> None:
         pass
 
     @abstractmethod
-    def reset(self):
+    def inline_buttons(self, message=None, call=None):
         pass
 
     @abstractmethod
-    def inline_buttons(self, message, call):
-        pass
-
-    @abstractmethod
-    def printing(self, message, call):
-        pass
-
-    @abstractmethod
-    def sentence_buttons(self, message=None, call=None):
+    def print_words(self, message, call):
         pass
 
     @abstractmethod
     def menu(self, message, call):
-        pass
-
-    @abstractmethod
-    def vars(self, message, sents, count):
         pass
 
     @abstractmethod
@@ -58,11 +47,11 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def sents_to_words(self, message, sents):
+    def sent_to_words(self, *args, **kwargs):
         pass
 
     @abstractmethod
-    def write_word(self, message):
+    def  save_word(self, message):
         pass
 
     @abstractmethod
@@ -70,9 +59,29 @@ class State(ABC):
         pass
 
     @abstractmethod
-    def buttons(self, message):
+    def words_buttons(self, message):
         pass
 
     @abstractmethod
-    def instructions(self, message) -> None:
+    def instructions(self, *args, **kwargs) -> None:
+        pass
+
+    @abstractmethod
+    def detect_language(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def get_language_fullname(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def save_text(self, *args, **kwargs):
+        pass
+    
+    @abstractmethod
+    def text_window_buttons(self, *args, **kwargs):
+        pass
+
+    @abstractmethod
+    def send_text_window(self, *args, **kwargs):
         pass
