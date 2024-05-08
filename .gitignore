@@ -2,17 +2,20 @@
 /*
 
 # Includelist some files
-# !bot.py
-# !config.yaml
-# !context.py
-# !database.py
-# !default.py
-# !learn.py
-# !main.py
-# !path.py
-# !state.py
-# !text.py
-# !users.py
-# !users.yaml
-# !wiki.py
-# !mongodb_database.py
+/app/*
+!/app/mongodb_database.py
+
+!bot.py
+!config.yaml
+!context.py
+!database.py
+!default.py
+!learn.py
+!main.py
+!path.py
+!state.py
+!text.py
+!users.py
+!users.yaml
+!wiki.py
+!mongodb_database.py
