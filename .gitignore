@@ -1,4 +1,13 @@
 /*
 !/app/
 /app/*
+!app/bot.py
+!app/context.py
+!app/database.py
+!app/default.py
+!app/learn.py
+!app/main.py
 !app/mongodb_database.py
+!app/state.py
+!app/text.py
+!app/windows.py
